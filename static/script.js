@@ -4,25 +4,25 @@ const term = new Terminal({
     cursorBlink: true,
     theme: {
         background: '#000000',
-        foreground: '#FFFFFF',
-        cursor: '#FFFFFF',
+        foreground: '#d1d1d1',
+        cursor: '#d1d1d1',
         selection: 'rgba(255, 255, 255, 0.3)',
-        black: '#2E3436',
-        red: '#CC0000',
-        green: '#4E9A06',
-        yellow: '#C4A000',
-        blue: '#3465A4',
-        magenta: '#75507B',
-        cyan: '#06989A',
-        white: '#D3D7CF',
-        brightBlack: '#555753',
-        brightRed: '#EF2929',
-        brightGreen: '#8AE234',
-        brightYellow: '#FCE94F',
-        brightBlue: '#729FCF',
-        brightMagenta: '#AD7FA8',
-        brightCyan: '#34E2E2',
-        brightWhite: '#EEEEEC'
+        black: '#000000',
+        red: '#e06c75',
+        green: '#98c379',
+        yellow: '#e5c07b',
+        blue: '#61afef',
+        magenta: '#c678dd',
+        cyan: '#56b6c2',
+        white: '#d1d1d1',
+        brightBlack: '#545454',
+        brightRed: '#e06c75',
+        brightGreen: '#98c379',
+        brightYellow: '#e5c07b',
+        brightBlue: '#61afef',
+        brightMagenta: '#c678dd',
+        brightCyan: '#56b6c2',
+        brightWhite: '#ffffff'
     }
 });
 const fitAddon = new FitAddon.FitAddon();
@@ -95,7 +95,6 @@ term.onData(data => {
                     ws.send(JSON.stringify({ type: 'auth', username: username }));
                     inputBuffer = '';
                     state = 'password'; // 다음 상태는 비밀번호 입력
-                    term.write('Enter your password: ');
                 } else {
                     term.writeln('\r\nUsername cannot be empty.');
                     term.write('Enter your username: ');

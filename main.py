@@ -142,7 +142,10 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         print("Client disconnected")
     except paramiko.AuthenticationException:
-        await websocket.send_text("\r\nAuthentication failed. Please check your username and password.\r\n")
+        try:
+            await websocket.send_text("\r\nAuthentication failed. Please check your username and password.\r\n")
+        except WebSocketDisconnect:
+            print("Client disconnected before authentication failure could be sent.")
     except Exception as e:
         print(f"An error occurred: {e}")
         try:
