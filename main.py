@@ -154,6 +154,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                         "type": "download_response",
                                         "error": f"Failed to download file: {e}"
                                     }))
+                                channel.send('\n')
 
                         else:
                             # 'type'이 없거나 알 수 없는 JSON 메시지는 일반 입력으로 처리
