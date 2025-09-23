@@ -13,10 +13,8 @@ from fastapi.staticfiles import StaticFiles
 
 # PyInstaller에 의해 생성된 임시 경로 확인
 if getattr(sys, 'frozen', False):
-    # PyInstaller로 빌드된 경우
     base_dir = sys._MEIPASS
 else:
-    # 일반 Python 환경에서 실행된 경우
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
 static_path = os.path.join(base_dir, "static")
@@ -39,49 +37,51 @@ async def read_root():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """웹소켓 연결을 처리하고 SSH 세션을 중계합니다."""
+    """웹소켓 연결 및 전체 세션을 처리합니다."""
     await websocket.accept()
     ssh_client = None
     channel = None
     sftp = None
+    forward_task = None
 
     try:
-        # 1. 프론트엔드로부터 사용자 이름 받기
-        auth_message = await websocket.receive_text()
-        auth_data = json.loads(auth_message)
-        if auth_data.get("type") == "auth" and "username" in auth_data:
-            username = auth_data["username"]
-            await websocket.send_text(f"Connecting as {username}...\r\n")
-            await websocket.send_text("Password: ")  # 프론트엔드에 비밀번호 프롬프트 전송
-        else:
-            await websocket.send_text("\r\nInvalid authentication message.\r\n")
-            await websocket.close()
-            return
+        # --- 인증 루프 ---
+        while True:
+            try:
+                # 1. 클라이언트로부터 사용자 이름 받기
+                auth_message = await websocket.receive_text()
+                auth_data = json.loads(auth_message)
+                if not (auth_data.get("type") == "auth" and "username" in auth_data):
+                    continue
+                username = auth_data["username"]
+                await websocket.send_text("Password: ")
 
-        # 2. 프론트엔드로부터 비밀번호 받기
-        password_message = await websocket.receive_text()
-        password_data = json.loads(password_message)
-        if password_data.get("type") == "auth" and "password" in password_data:
-            password = password_data["password"]
-        else:
-            await websocket.send_text("\r\nInvalid password message.\r\n")
-            await websocket.close()
-            return
+                # 2. 클라이언트로부터 비밀번호 받기
+                password_message = await websocket.receive_text()
+                password_data = json.loads(password_message)
+                if not (password_data.get("type") == "auth" and "password" in password_data):
+                    continue
+                password = password_data["password"]
 
-        # 3. Paramiko SSH 클라이언트 설정
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                # 3. SSH 연결 시도
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                await asyncio.to_thread(
+                    ssh_client.connect,
+                    hostname=FIXED_HOST, port=FIXED_PORT,
+                    username=username, password=password,
+                )
+                # 4. 인증 성공 시 루프 탈출
+                break
 
-        # 4. SSH 연결 시도 (username과 password 사용)
-        await asyncio.to_thread(
-            ssh_client.connect,
-            hostname=FIXED_HOST,
-            port=FIXED_PORT,
-            username=username,
-            password=password,
-        )
+            except paramiko.AuthenticationException:
+                await websocket.send_text("Authentication failed. Please try again.\r\n")
+                continue # 루프의 처음으로 돌아가 재시도 대기
+            except (json.JSONDecodeError, AttributeError):
+                # 인증 중 잘못된 형식의 메시지 수신 시, 다음 시도를 위해 계속 진행
+                continue
 
-        # 5. 대화형 쉘(channel) 및 SFTP 클라이언트 열기
+        # --- 인증 성공 후 처리 ---
         channel = await asyncio.to_thread(ssh_client.invoke_shell)
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
         await websocket.send_text(json.dumps({
@@ -89,7 +89,6 @@ async def websocket_endpoint(websocket: WebSocket):
             "message": "Connection successful!\r\n\r\n"
         }))
 
-        # SSH 서버 -> 클라이언트 데이터 전송 루프
         async def forward_ssh_to_ws():
             try:
                 while not channel.closed:
@@ -98,19 +97,17 @@ async def websocket_endpoint(websocket: WebSocket):
                         if data:
                             await websocket.send_text(data.decode('utf-8', 'ignore'))
                     await asyncio.sleep(0.01)
-            except Exception:
-                await websocket.close()
+            except:
+                pass
 
         forward_task = asyncio.create_task(forward_ssh_to_ws())
 
-        # 클라이언트 -> SSH 서버 데이터 전송 루프
+        # --- 메인 메시지 루프 (클라이언트 -> 서버) ---
         while True:
             message_str = await websocket.receive_text()
             if channel and not channel.closed:
                 try:
-                    # 메시지를 JSON으로 파싱 시도
                     message_data = json.loads(message_str)
-
                     if isinstance(message_data, dict):
                         msg_type = message_data.get("type")
 
@@ -119,19 +116,6 @@ async def websocket_endpoint(websocket: WebSocket):
                             rows = message_data.get("rows")
                             if cols and rows:
                                 channel.resize_pty(width=cols, height=rows)
-
-                        elif msg_type == "upload":
-                            path = message_data.get("path")
-                            data_b64 = message_data.get("data")
-                            if path and data_b64 and sftp:
-                                try:
-                                    file_data = base64.b64decode(data_b64)
-                                    # sftp.putfo는 동기 함수이므로 to_thread 사용
-                                    await asyncio.to_thread(sftp.putfo, fl=io.BytesIO(file_data), remotepath=path)
-                                    await websocket.send_text(f"\r\n[File uploaded successfully to {path}]\r\n")
-                                    channel.send('\n')
-                                except Exception as e:
-                                    await websocket.send_text(f"\r\n[File upload failed: {e}]\r\n")
 
                         elif msg_type == "list_files":
                             path = message_data.get("path", ".")
@@ -143,7 +127,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     files.append({
                                         "name": attr.filename,
                                         "type": "dir" if is_dir else "file",
-                                        "longname": str(attr) # for more details if needed later
+                                        "longname": str(attr)
                                     })
                                 await websocket.send_text(json.dumps({
                                     "type": "list_files_response",
@@ -163,9 +147,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     filename = os.path.basename(path)
                                     with sftp.open(path, 'rb') as f:
                                         file_data = await asyncio.to_thread(f.read)
-                                    
                                     data_b64 = base64.b64encode(file_data).decode('utf-8')
-                                    
                                     await websocket.send_text(json.dumps({
                                         "type": "download_response",
                                         "filename": filename,
@@ -183,39 +165,42 @@ async def websocket_endpoint(websocket: WebSocket):
                                     }))
                                 channel.send('\n')
 
+                        elif msg_type == "upload":
+                            path = message_data.get("path")
+                            data_b64 = message_data.get("data")
+                            if path and data_b64 and sftp:
+                                try:
+                                    file_data = base64.b64decode(data_b64)
+                                    await asyncio.to_thread(sftp.putfo, fl=io.BytesIO(file_data), remotepath=path)
+                                    await websocket.send_text(f"\r\n[File uploaded successfully to {path}]\r\n")
+                                    channel.send('\n')
+                                except Exception as e:
+                                    await websocket.send_text(f"\r\n[File upload failed: {e}]\r\n")
+                                    channel.send('\n')
                         else:
-                            # Received an unknown JSON message type post-login. Log it and ignore.
                             print(f"Warning: Received unknown JSON message type post-login: {message_str}")
                     else:
-                        # JSON이 딕셔너리가 아닌 경우 (예: 숫자, 문자열) 일반 입력으로 처리
                         channel.send(message_str)
-
                 except json.JSONDecodeError:
-                    # JSON 파싱 실패 시 일반 텍스트 데이터(사용자 입력) 처리
                     channel.send(message_str)
 
     except WebSocketDisconnect:
         print("Client disconnected")
-    except paramiko.AuthenticationException:
-        try:
-            await websocket.send_text("\r\nAuthentication failed. Please check your username and password.\r\n")
-        except WebSocketDisconnect:
-            print("Client disconnected before authentication failure could be sent.")
     except Exception as e:
         print(f"An error occurred: {e}")
         try:
             await websocket.send_text(f"\r\nAn error occurred: {e}\r\n")
         except:
-            pass  # Websocket might be closed already
+            pass
     finally:
+        if forward_task:
+            forward_task.cancel()
         if sftp:
             sftp.close()
         if channel:
             channel.close()
         if ssh_client:
             ssh_client.close()
-        if 'forward_task' in locals() and not forward_task.done():
-            forward_task.cancel()
         print("Connection closed.")
 
 
@@ -226,4 +211,3 @@ if __name__ == "__main__":
     print("http://127.0.0.1:8001")
     print("="*50)
     uvicorn.run(app, host="127.0.0.1", port=8001)
-
