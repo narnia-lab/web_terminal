@@ -78,6 +78,7 @@ const welcomeTips =
 `   - cd [디렉토리]: 디렉토리로 이동\r\n` +
 `   - cd ..: 상위 디렉토리로 이동\r\n` +
 `   - pwd: 현재 디렉토리 경로 보기\r\n` +
+`   - Ctrl+C: 현재 실행중인 명령어 중단\r\n` +
 `2. 터미널 내에서 Ctrl+Shift+C (복사) 와 Ctrl+Shift+V (붙여넣기) 를 사용하세요.\r\n` +
 `3. 'Upload' 와 'Download' 버튼으로 파일을 전송할 수 있습니다.\r\n`;
 // --- WebSocket Handlers ---
