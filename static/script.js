@@ -63,7 +63,15 @@ ws.onopen = () => {
 ws.onmessage = (event) => {
     try {
         const message_data = JSON.parse(event.data);
-        if (message_data.type === 'download_response') {
+
+        if (message_data.type === 'auth_success') {
+            state = 'connected';
+            uploadBtn.disabled = false;
+            downloadBtn.disabled = false;
+            term.write(message_data.message);
+            ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+            return;
+        } else if (message_data.type === 'download_response') {
             if (message_data.error) {
                 term.writeln(`\r\n[Download failed: ${message_data.error}]`);
             } else {
@@ -80,10 +88,10 @@ ws.onmessage = (event) => {
             return;
         }
     } catch (e) {
-        // JSON 파싱 실패 시 일반 텍스트로 처리
+        // JSON 파싱 실패 시, 아래의 일반 텍스트 처리 로직으로 넘어갑니다.
     }
 
-    // 비밀번호 프롬프트가 오면 상태 변경
+    // 일반 텍스트 데이터 처리
     if (state !== 'connected' && event.data.includes('Password:')) {
         state = 'password';
     }
@@ -118,7 +126,7 @@ term.onData(data => {
                     // 사용자 이름을 JSON으로 백엔드에 전송
                     ws.send(JSON.stringify({ type: 'auth', username: username }));
                     inputBuffer = '';
-                    state = 'password'; // 다음 상태는 비밀번호 입력
+                    // 서버가 "Password:" 프롬프트를 보내주면 onmessage 핸들러가 state를 변경할 것임
                 } else {
                     term.writeln('\r\nUsername cannot be empty.');
                     term.write('Enter your username: ');
@@ -147,12 +155,7 @@ term.onData(data => {
                 // 비밀번호를 JSON으로 백엔드에 전송
                 ws.send(JSON.stringify({ type: 'auth', password: password }));
                 inputBuffer = '';
-                state = 'connected'; // 연결 상태로 변경
-                uploadBtn.disabled = false; // 업로드 버튼 활성화
-                downloadBtn.disabled = false; // 다운로드 버튼 활성화
-
-                // 연결 직후, 현재 터미널 크기를 백엔드에 전송
-                ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+                // DO NOT change state or enable buttons here. Wait for server confirmation.
                 return;
             }
             // Backspace 키 처리

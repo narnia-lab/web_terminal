@@ -84,7 +84,10 @@ async def websocket_endpoint(websocket: WebSocket):
         # 5. 대화형 쉘(channel) 및 SFTP 클라이언트 열기
         channel = await asyncio.to_thread(ssh_client.invoke_shell)
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
-        await websocket.send_text("Connection successful!\r\n\r\n")
+        await websocket.send_text(json.dumps({
+            "type": "auth_success",
+            "message": "Connection successful!\r\n\r\n"
+        }))
 
         # SSH 서버 -> 클라이언트 데이터 전송 루프
         async def forward_ssh_to_ws():
