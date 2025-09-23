@@ -5,6 +5,7 @@ import asyncio
 import os
 import sys
 import paramiko
+import stat
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -128,6 +129,29 @@ async def websocket_endpoint(websocket: WebSocket):
                                     channel.send('\n')
                                 except Exception as e:
                                     await websocket.send_text(f"\r\n[File upload failed: {e}]\r\n")
+
+                        elif msg_type == "list_files":
+                            path = message_data.get("path", ".")
+                            try:
+                                attrs = await asyncio.to_thread(sftp.listdir_attr, path)
+                                files = []
+                                for attr in sorted(attrs, key=lambda a: a.filename):
+                                    is_dir = stat.S_ISDIR(attr.st_mode)
+                                    files.append({
+                                        "name": attr.filename,
+                                        "type": "dir" if is_dir else "file",
+                                        "longname": str(attr) # for more details if needed later
+                                    })
+                                await websocket.send_text(json.dumps({
+                                    "type": "list_files_response",
+                                    "path": path,
+                                    "files": files
+                                }))
+                            except Exception as e:
+                                await websocket.send_text(json.dumps({
+                                    "type": "list_files_response",
+                                    "error": str(e)
+                                }))
 
                         elif msg_type == "download":
                             path = message_data.get("path")

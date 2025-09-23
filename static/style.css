@@ -46,3 +46,90 @@ html, body {
     width: 100%;
     height: 100%;
 }
+
+/* --- File Explorer Modal --- */
+#file-explorer-modal.modal-hidden {
+    display: none;
+}
+
+#file-explorer-modal {
+    position: fixed;
+    z-index: 200;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    width: 80%;
+    max-width: 600px;
+    height: 70%;
+    display: flex;
+    flex-direction: column;
+    border-radius: 5px;
+}
+
+.modal-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid #555;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2a2a2a;
+}
+
+#current-path {
+    font-family: monospace;
+    color: #d1d1d1;
+}
+
+#close-modal-btn {
+    background: none;
+    border: none;
+    color: #d1d1d1;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+#file-list li {
+    padding: 8px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    font-family: monospace;
+    color: #d1d1d1;
+    display: flex;
+    align-items: center;
+}
+
+#file-list li:hover {
+    background-color: #333;
+}
+
+#file-list li::before {
+    content: '\01f4c4'; /* 📄 */
+    margin-right: 10px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+#file-list li[data-type="dir"]::before {
+    content: '\01f4c2'; /* 📂 */
+}
+
+#file-list li[data-type="dir"] {
+    color: #61afef; /* Blue for directories */
+}

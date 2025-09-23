@@ -10,6 +10,16 @@
 <body>
     <div id="terminal"></div>
 
+    <div id="file-explorer-modal" class="modal-hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="current-path">/</span>
+                <button id="close-modal-btn">&times;</button>
+            </div>
+            <ul id="file-list"></ul>
+        </div>
+    </div>
+
     <div id="file-transfer-ui">
         <button id="upload-btn" disabled>Upload File</button>
         <button id="download-btn" disabled>Download File</button>

@@ -71,6 +71,13 @@ ws.onmessage = (event) => {
                 term.writeln(`\r\n[File \"${message_data.filename}\" downloaded successfully.]`);
             }
             return;
+        } else if (message_data.type === 'list_files_response') {
+            if (message_data.error) {
+                fileList.innerHTML = `<li>Error: ${message_data.error}</li>`;
+            } else {
+                renderFileList(message_data.path, message_data.files);
+            }
+            return;
         }
     } catch (e) {
         // JSON 파싱 실패 시 일반 텍스트로 처리
@@ -87,6 +94,7 @@ ws.onmessage = (event) => {
 ws.onclose = () => {
     uploadBtn.disabled = true; // 업로드 버튼 비활성화
     downloadBtn.disabled = true; // 다운로드 버튼 비활성화
+    closeModal(); // 모달이 열려있으면 닫기
     term.writeln('\r\n\r\n[Connection closed]');
 };
 
@@ -167,10 +175,70 @@ term.onData(data => {
     }
 });
 
-// --- 파일 업로드/다운로드 로직 ---
+// --- 파일 탐색기 및 업로드/다운로드 로직 ---
 const uploadBtn = document.getElementById('upload-btn');
 const downloadBtn = document.getElementById('download-btn');
 const fileInput = document.getElementById('file-input');
+const modal = document.getElementById('file-explorer-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const fileList = document.getElementById('file-list');
+const currentPathSpan = document.getElementById('current-path');
+
+// 모달 닫기
+function closeModal() {
+    modal.classList.add('modal-hidden');
+}
+
+// 모달 열기
+function openModal() {
+    modal.classList.remove('modal-hidden');
+}
+
+// 파일 목록 렌더링
+function renderFileList(path, files) {
+    currentPathSpan.textContent = path;
+    fileList.innerHTML = ''; // 목록 초기화
+
+    // 상위 디렉토리('..') 추가
+    if (path !== '/') {
+        const parentLi = document.createElement('li');
+        parentLi.textContent = '..';
+        parentLi.dataset.type = 'dir';
+        parentLi.addEventListener('click', () => {
+            // '/'로 끝나는 경우와 아닌 경우를 모두 처리
+            const parentPath = path.replace(/\/?[^\/]+\/?$/, '') || '/';
+            fetchAndRenderFiles(parentPath);
+        });
+        fileList.appendChild(parentLi);
+    }
+
+    files.forEach(file => {
+        const li = document.createElement('li');
+        li.textContent = file.name;
+        li.dataset.type = file.type;
+        
+        const fullPath = (path.endsWith('/') ? path : path + '/') + file.name;
+
+        if (file.type === 'dir') {
+            li.addEventListener('click', () => fetchAndRenderFiles(fullPath));
+        } else {
+            li.addEventListener('click', () => {
+                term.writeln(`\r\n[Requesting download for ${fullPath}...]`);
+                ws.send(JSON.stringify({ type: 'download', path: fullPath }));
+                closeModal();
+            });
+        }
+        fileList.appendChild(li);
+    });
+}
+
+// 서버에 파일 목록 요청
+function fetchAndRenderFiles(path) {
+    if (ws.readyState === WebSocket.OPEN) {
+        fileList.innerHTML = '<li>Loading...</li>';
+        ws.send(JSON.stringify({ type: 'list_files', path: path }));
+    }
+}
 
 // Base64 데이터를 Blob으로 변환 후 다운로드 실행
 function triggerDownload(filename, base64Data) {
@@ -191,6 +259,9 @@ function triggerDownload(filename, base64Data) {
     URL.revokeObjectURL(link.href);
 }
 
+// --- 이벤트 리스너 설정 ---
+closeModalBtn.addEventListener('click', closeModal);
+
 uploadBtn.addEventListener('click', () => {
     if (state !== 'connected') {
         term.writeln('\r\n[Please connect to the server before uploading files.]');
@@ -204,11 +275,8 @@ downloadBtn.addEventListener('click', () => {
         term.writeln('\r\n[Please connect to the server before downloading files.]');
         return;
     }
-    const remotePath = prompt('Enter the full path of the file to download from the server:', `/home/${username}/`);
-    if (remotePath) {
-        term.writeln(`\r\n[Requesting download for ${remotePath}...]`);
-        ws.send(JSON.stringify({ type: 'download', path: remotePath }));
-    }
+    openModal();
+    fetchAndRenderFiles(`/home/${username}`); // 기본 경로로 시작
 });
 
 fileInput.addEventListener('change', (event) => {
