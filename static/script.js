@@ -186,6 +186,12 @@ const modal = document.getElementById('file-explorer-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const fileList = document.getElementById('file-list');
 const currentPathSpan = document.getElementById('current-path');
+const modalFooter = document.querySelector('.modal-footer');
+const filenameInput = document.getElementById('modal-filename-input');
+const confirmBtn = document.getElementById('modal-confirm-btn');
+
+let modalMode = 'download'; // 'download' or 'upload'
+let fileToUpload = null;
 
 // 터미널 프롬프트에서 현재 경로를 파싱
 function findPwdInTerminal() {
@@ -213,7 +219,14 @@ function closeModal() {
 }
 
 // 모달 열기
-function openModal() {
+function openModal(mode, options = {}) {
+    modalMode = mode;
+    if (modalMode === 'upload') {
+        modalFooter.style.display = 'flex';
+        filenameInput.value = options.filename || '';
+    } else {
+        modalFooter.style.display = 'none';
+    }
     modal.classList.remove('modal-hidden');
 }
 
@@ -228,7 +241,6 @@ function renderFileList(path, files) {
         parentLi.textContent = '..';
         parentLi.dataset.type = 'dir';
         parentLi.addEventListener('click', () => {
-            // '/'로 끝나는 경우와 아닌 경우를 모두 처리
             const parentPath = path.replace(/\/?[^\/]+\/?$/, '') || '/';
             fetchAndRenderFiles(parentPath);
         });
@@ -246,9 +258,14 @@ function renderFileList(path, files) {
             li.addEventListener('click', () => fetchAndRenderFiles(fullPath));
         } else {
             li.addEventListener('click', () => {
-                term.writeln(`\r\n[Requesting download for ${fullPath}...]`);
-                ws.send(JSON.stringify({ type: 'download', path: fullPath }));
-                closeModal();
+                if (modalMode === 'download') {
+                    term.writeln(`\r\n[Requesting download for ${fullPath}...]`);
+                    ws.send(JSON.stringify({ type: 'download', path: fullPath }));
+                    closeModal();
+                } else if (modalMode === 'upload') {
+                    // 업로드 모드에서 파일을 클릭하면 파일명 입력창에 해당 파일명을 채워넣음
+                    filenameInput.value = file.name;
+                }
             });
         }
         fileList.appendChild(li);
@@ -285,6 +302,47 @@ function triggerDownload(filename, base64Data) {
 // --- 이벤트 리스너 설정 ---
 closeModalBtn.addEventListener('click', closeModal);
 
+// 모달의 Confirm 버튼 클릭 (업로드 실행)
+confirmBtn.addEventListener('click', () => {
+    if (!fileToUpload) {
+        term.writeln('\r\n[Upload error: No file selected.]');
+        return;
+    }
+
+    const currentDir = currentPathSpan.textContent;
+    const finalName = filenameInput.value;
+    if (!finalName) {
+        term.writeln('\r\n[Upload error: Filename cannot be empty.]');
+        return;
+    }
+
+    const destinationPath = (currentDir.endsWith('/') ? currentDir : currentDir + '/') + finalName;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        term.writeln(`\r\n[Uploading ${fileToUpload.name} to ${destinationPath}...]`);
+        const base64Data = e.target.result.split(',', 2)[1];
+        ws.send(JSON.stringify({
+            type: 'upload',
+            path: destinationPath,
+            data: base64Data
+        }));
+        // Cleanup after sending
+        closeModal();
+        fileToUpload = null;
+        fileInput.value = '';
+    };
+    reader.onerror = () => {
+        term.writeln(`\r\n[Error reading file: ${fileToUpload.name}]`);
+        // Cleanup on error too
+        closeModal();
+        fileToUpload = null;
+        fileInput.value = '';
+    };
+    
+    reader.readAsDataURL(fileToUpload);
+});
+
 uploadBtn.addEventListener('click', () => {
     if (state !== 'connected') {
         term.writeln('\r\n[Please connect to the server before uploading files.]');
@@ -298,44 +356,18 @@ downloadBtn.addEventListener('click', () => {
         term.writeln('\r\n[Please connect to the server before downloading files.]');
         return;
     }
-    openModal();
     const pwd = findPwdInTerminal();
-    fetchAndRenderFiles(pwd || `/home/${username}`); // 현재 경로 또는 기본 경로로 시작
+    openModal('download');
+    fetchAndRenderFiles(pwd || `/home/${username}`);
 });
 
 fileInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) {
+    fileToUpload = event.target.files[0];
+    if (!fileToUpload) {
         return;
     }
 
     const pwd = findPwdInTerminal();
-    const defaultPath = pwd ? `${pwd}/${file.name}` : `/home/${username}/${file.name}`;
-    const destinationPath = prompt(`Enter the destination path for "${file.name}" on the server:`, defaultPath);
-    if (!destinationPath) {
-        term.writeln('\r\n[Upload cancelled.]');
-        return;
-    }
-
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        term.writeln(`\r\n[Uploading ${file.name} to ${destinationPath}...]`);
-        
-        const base64Data = e.target.result.split(',', 2)[1];
-
-        ws.send(JSON.stringify({
-            type: 'upload',
-            path: destinationPath,
-            data: base64Data
-        }));
-    };
-
-    reader.onerror = () => {
-        term.writeln(`\r\n[Error reading file: ${file.name}]`);
-    };
-
-    reader.readAsDataURL(file);
-
-    fileInput.value = '';
+    openModal('upload', { filename: fileToUpload.name });
+    fetchAndRenderFiles(pwd || `/home/${username}`);
 });

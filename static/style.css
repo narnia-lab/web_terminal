@@ -50,7 +50,7 @@ html, body {
 }
 
 /* --- File Explorer Modal --- */
-#file-explorer-modal.modal-hidden {
+#file-explorer-modal.modal-hidden, #input-modal.modal-hidden {
     display: none;
 }
 
@@ -134,6 +134,38 @@ html, body {
 
 #file-list li[data-type="dir"] {
     color: #61afef; /* Blue for directories */
+}
+
+/* --- Modal Footer for Upload --- */
+.modal-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #555;
+    background-color: #2a2a2a;
+    display: flex;
+}
+
+#modal-filename-input {
+    flex-grow: 1;
+    background-color: #111;
+    border: 1px solid #555;
+    color: #d1d1d1;
+    padding: 8px;
+    font-family: monospace;
+    border-radius: 4px;
+}
+
+#modal-confirm-btn {
+    background-color: #3465A4;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#modal-confirm-btn:hover {
+    background-color: #729FCF;
 }
 
 /* Custom Overlay Scrollbar for the Terminal */
