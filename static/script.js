@@ -309,11 +309,14 @@ fileInput.addEventListener('change', (event) => {
         return;
     }
 
-    const destinationPath = prompt(`Enter the destination path for "${file.name}" on the server:`, `/home/${username}/${file.name}`);
+    const pwd = findPwdInTerminal();
+    const defaultPath = pwd ? `${pwd}/${file.name}` : `/home/${username}/${file.name}`;
+    const destinationPath = prompt(`Enter the destination path for "${file.name}" on the server:`, defaultPath);
     if (!destinationPath) {
         term.writeln('\r\n[Upload cancelled.]');
         return;
     }
+
 
     const reader = new FileReader();
     reader.onload = (e) => {
