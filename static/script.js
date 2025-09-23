@@ -61,6 +61,21 @@ ws.onopen = () => {
 
 // 웹소켓으로부터 메시지를 받았을 때 (백엔드 -> 프론트엔드)
 ws.onmessage = (event) => {
+    try {
+        const message_data = JSON.parse(event.data);
+        if (message_data.type === 'download_response') {
+            if (message_data.error) {
+                term.writeln(`\r\n[Download failed: ${message_data.error}]`);
+            } else {
+                triggerDownload(message_data.filename, message_data.data);
+                term.writeln(`\r\n[File \"${message_data.filename}\" downloaded successfully.]`);
+            }
+            return;
+        }
+    } catch (e) {
+        // JSON 파싱 실패 시 일반 텍스트로 처리
+    }
+
     // 비밀번호 프롬프트가 오면 상태 변경
     if (state !== 'connected' && event.data.includes('Password:')) {
         state = 'password';
@@ -71,6 +86,7 @@ ws.onmessage = (event) => {
 // 웹소켓 연결이 닫혔을 때
 ws.onclose = () => {
     uploadBtn.disabled = true; // 업로드 버튼 비활성화
+    downloadBtn.disabled = true; // 다운로드 버튼 비활성화
     term.writeln('\r\n\r\n[Connection closed]');
 };
 
@@ -125,6 +141,7 @@ term.onData(data => {
                 inputBuffer = '';
                 state = 'connected'; // 연결 상태로 변경
                 uploadBtn.disabled = false; // 업로드 버튼 활성화
+                downloadBtn.disabled = false; // 다운로드 버튼 활성화
 
                 // 연결 직후, 현재 터미널 크기를 백엔드에 전송
                 ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -150,17 +167,48 @@ term.onData(data => {
     }
 });
 
-// --- 파일 업로드 로직 ---
+// --- 파일 업로드/다운로드 로직 ---
 const uploadBtn = document.getElementById('upload-btn');
+const downloadBtn = document.getElementById('download-btn');
 const fileInput = document.getElementById('file-input');
 
+// Base64 데이터를 Blob으로 변환 후 다운로드 실행
+function triggerDownload(filename, base64Data) {
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
 uploadBtn.addEventListener('click', () => {
-    // 연결된 상태에서만 업로드 버튼 활성화
     if (state !== 'connected') {
         term.writeln('\r\n[Please connect to the server before uploading files.]');
         return;
     }
-    fileInput.click(); // 숨겨진 파일 입력창 클릭
+    fileInput.click();
+});
+
+downloadBtn.addEventListener('click', () => {
+    if (state !== 'connected') {
+        term.writeln('\r\n[Please connect to the server before downloading files.]');
+        return;
+    }
+    const remotePath = prompt('Enter the full path of the file to download from the server:', `/home/${username}/`);
+    if (remotePath) {
+        term.writeln(`\r\n[Requesting download for ${remotePath}...]`);
+        ws.send(JSON.stringify({ type: 'download', path: remotePath }));
+    }
 });
 
 fileInput.addEventListener('change', (event) => {
@@ -179,7 +227,6 @@ fileInput.addEventListener('change', (event) => {
     reader.onload = (e) => {
         term.writeln(`\r\n[Uploading ${file.name} to ${destinationPath}...]`);
         
-        // e.target.result는 "data:;base64,xxxxx" 형태이므로, 콤마 뒤의 base64 데이터만 추출
         const base64Data = e.target.result.split(',', 2)[1];
 
         ws.send(JSON.stringify({
@@ -195,6 +242,5 @@ fileInput.addEventListener('change', (event) => {
 
     reader.readAsDataURL(file);
 
-    // 다음에 같은 파일을 다시 선택할 수 있도록 입력값 초기화
     fileInput.value = '';
 });

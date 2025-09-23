@@ -128,6 +128,33 @@ async def websocket_endpoint(websocket: WebSocket):
                                     channel.send('\n')
                                 except Exception as e:
                                     await websocket.send_text(f"\r\n[File upload failed: {e}]\r\n")
+
+                        elif msg_type == "download":
+                            path = message_data.get("path")
+                            if path and sftp:
+                                try:
+                                    filename = os.path.basename(path)
+                                    with sftp.open(path, 'rb') as f:
+                                        file_data = await asyncio.to_thread(f.read)
+                                    
+                                    data_b64 = base64.b64encode(file_data).decode('utf-8')
+                                    
+                                    await websocket.send_text(json.dumps({
+                                        "type": "download_response",
+                                        "filename": filename,
+                                        "data": data_b64
+                                    }))
+                                except FileNotFoundError:
+                                    await websocket.send_text(json.dumps({
+                                        "type": "download_response",
+                                        "error": f"File not found: {path}"
+                                    }))
+                                except Exception as e:
+                                    await websocket.send_text(json.dumps({
+                                        "type": "download_response",
+                                        "error": f"Failed to download file: {e}"
+                                    }))
+
                         else:
                             # 'type'이 없거나 알 수 없는 JSON 메시지는 일반 입력으로 처리
                             channel.send(message_str)
