@@ -2,11 +2,23 @@ import base64
 import io
 import json
 import asyncio
+import os
+import sys
 import paramiko
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+# PyInstaller에 의해 생성된 임시 경로 확인
+if getattr(sys, 'frozen', False):
+    # PyInstaller로 빌드된 경우
+    base_dir = sys._MEIPASS
+else:
+    # 일반 Python 환경에서 실행된 경우
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+static_path = os.path.join(base_dir, "static")
 
 # --- 접속할 서버 정보 (고정) ---
 FIXED_HOST = "narnia-lab.duckdns.org"
@@ -15,13 +27,13 @@ FIXED_PORT = 1225
 app = FastAPI()
 
 # 'static' 디렉토리를 정적 파일 경로로 마운트
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 
 @app.get("/")
 async def read_root():
     """루트 URL 접속 시 index.html 파일을 반환합니다."""
-    return FileResponse('static/index.html')
+    return FileResponse(os.path.join(static_path, 'index.html'))
 
 
 @app.websocket("/ws")
@@ -150,5 +162,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    print("="*50)
+    print("웹 터미널 서버가 시작되었습니다.")
+    print("아래 주소를 클릭하여 웹 브라우저에서 접속하세요:")
+    print("http://127.0.0.1:8001")
+    print("="*50)
+    uvicorn.run(app, host="127.0.0.1", port=8001)
 
