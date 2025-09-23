@@ -70,21 +70,6 @@ let modalMode = 'download'; // 'download' or 'upload'
 let fileToUpload = null;
 
 // --- Welcome Message ---
-const welcomeArt = `
-` +
-`███╗   ██╗██████╗ ███╗   ██╗██╗  ██╗
-` +
-`████╗  ██║██╔══██╗████╗  ██║██║  ██║
-` +
-`██╔██╗ ██║██████╔╝██╔██╗ ██║██║  ██║
-` +
-`██║╚██╗██║██╔══██╗██║╚██╗██║██║  ██║
-` +
-`██║ ╚████║██║  ██║██║ ╚████║╚██████╔╝
-` +
-`╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝
-
-`;
 const welcomeTips = 
 `Welcome to Narnia Web Terminal!
 
@@ -115,7 +100,6 @@ ws.onmessage = (event) => {
             loginModal.style.display = 'none'; // Hide login modal
             uploadBtn.disabled = false;
             downloadBtn.disabled = false;
-            term.writeln(welcomeArt.replace(/\n/g, '\r\n'));
             term.writeln(welcomeTips.replace(/\n/g, '\r\n'));
             term.write(message_data.message);
             ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -151,6 +135,8 @@ ws.onmessage = (event) => {
             loginErrorMsg.textContent = 'Authentication failed. Please try again.';
             passwordInput.value = '';
             passwordInput.focus();
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login';
         } else {
             // Other messages during auth (like connection info)
             term.write(textData);
@@ -196,12 +182,16 @@ function handleLogin() {
     }
 
     loginErrorMsg.textContent = ''; // Clear previous errors
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Logging in...';
 
     // Start the auth process by sending the username
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'auth', username: username }));
     } else {
         loginErrorMsg.textContent = 'Not connected to server. Please wait.';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
     }
 }
 

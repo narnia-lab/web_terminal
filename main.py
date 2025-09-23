@@ -184,8 +184,8 @@ async def websocket_endpoint(websocket: WebSocket):
                                 channel.send('\n')
 
                         else:
-                            # 'type'이 없거나 알 수 없는 JSON 메시지는 일반 입력으로 처리
-                            channel.send(message_str)
+                            # Received an unknown JSON message type post-login. Log it and ignore.
+                            print(f"Warning: Received unknown JSON message type post-login: {message_str}")
                     else:
                         # JSON이 딕셔너리가 아닌 경우 (예: 숫자, 문자열) 일반 입력으로 처리
                         channel.send(message_str)
