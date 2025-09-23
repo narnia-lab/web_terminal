@@ -151,14 +151,23 @@ ws.onclose = () => {
     closeFileExplorer();
     if (state !== 'connected') {
         loginModal.style.display = 'flex';
-        loginErrorMsg.textContent = 'Connection closed. Please try logging in again.';
+        loginErrorMsg.textContent = 'Connection failed. Please check the server and refresh.';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+    } else {
+        term.writeln('\r\n\r\n[Connection closed]');
     }
-    term.writeln('\r\n\r\n[Connection closed]');
 };
 
 ws.onerror = (error) => {
     console.error('WebSocket Error:', error);
-    term.writeln('\r\n\r\n[An error occurred with the connection]');
+    if (state !== 'connected') {
+        loginErrorMsg.textContent = 'A connection error occurred. Please refresh.';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+    } else {
+        term.writeln('\r\n\r\n[An error occurred with the connection]');
+    }
 };
 
 // --- Terminal Data Handler (User Input) ---
