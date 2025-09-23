@@ -184,6 +184,26 @@ const closeModalBtn = document.getElementById('close-modal-btn');
 const fileList = document.getElementById('file-list');
 const currentPathSpan = document.getElementById('current-path');
 
+// 터미널 프롬프트에서 현재 경로를 파싱
+function findPwdInTerminal() {
+    // user@host:~/path$ 또는 root@host:/path# 같은 형식의 프롬프트에서 경로를 찾음
+    const promptRegex = /:([^$#\s]+)\s*[$#]\s*$/;
+
+    for (let i = term.buffer.active.cursorY; i >= 0; i--) {
+        const line = term.buffer.active.getLine(i).translateToString();
+        const match = line.match(promptRegex);
+        if (match && match[1]) {
+            let path = match[1];
+            // '~'를 사용자의 홈 디렉토리로 치환
+            if (path.startsWith('~')) {
+                path = path.replace('~', `/home/${username}`);
+            }
+            return path;
+        }
+    }
+    return null; // 경로를 찾지 못한 경우
+}
+
 // 모달 닫기
 function closeModal() {
     modal.classList.add('modal-hidden');
@@ -276,7 +296,8 @@ downloadBtn.addEventListener('click', () => {
         return;
     }
     openModal();
-    fetchAndRenderFiles(`/home/${username}`); // 기본 경로로 시작
+    const pwd = findPwdInTerminal();
+    fetchAndRenderFiles(pwd || `/home/${username}`); // 현재 경로 또는 기본 경로로 시작
 });
 
 fileInput.addEventListener('change', (event) => {
