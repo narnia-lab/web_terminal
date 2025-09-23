@@ -71,17 +71,15 @@ let fileToUpload = null;
 
 // --- Welcome Message ---
 const welcomeTips = 
-`Welcome to Narnia Web Terminal!
-
-` + 
-`Tips for getting started:
-` + 
-`1. Use 'ls -la', 'cd', 'pwd' to navigate the remote server.
-` + 
-`2. Use the 'Upload' and 'Download' buttons for file transfers.
-` + 
-`3. This is a standard SSH shell. Most common linux commands will work.
-`;
+`Welcome to Narnia Web Terminal!\r\n\r\n` + 
+`Tips for getting started:\r\n` + 
+`1. Navigate the server with these commands:\r\n` + 
+`   - ls: List files and directories.\r\n` + 
+`   - cd [dir]: Change to a directory.\r\n` + 
+`   - cd ..: Go to the parent directory.\r\n` + 
+`   - pwd: Show your current directory.\r\n` + 
+`2. Use Ctrl+Shift+C (Copy) and Ctrl+Shift+V (Paste) in the terminal.\r\n` + 
+`3. Use the 'Upload' and 'Download' buttons for file transfers.\r\n`;
 
 // --- WebSocket Handlers ---
 ws.onopen = () => {
@@ -363,4 +361,18 @@ fileInput.addEventListener('change', (event) => {
     const pwd = findPwdInTerminal();
     openFileExplorer('upload', { filename: fileToUpload.name });
     fetchAndRenderFiles(pwd || `/home/${username}`);
+});
+
+// --- Custom Keyboard Shortcuts ---
+document.getElementById('terminal').addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault(); // Prevent developer tools from opening
+        const selection = term.getSelection();
+        if (selection) {
+            navigator.clipboard.writeText(selection).then(() => {
+                term.clearSelection();
+                term.focus(); // Refocus the terminal
+            });
+        }
+    }
 });
