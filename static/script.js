@@ -1,0 +1,121 @@
+// Xterm.js 터미널 인스턴스 생성 및 FitAddon 적용
+const term = new Terminal({
+    cursorBlink: true,
+    theme: {
+        background: '#000000',
+        foreground: '#ffffff',
+    }
+});
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+
+// 터미널을 #terminal div에 마운트하고 화면 크기에 맞춤
+term.open(document.getElementById('terminal'));
+fitAddon.fit();
+window.addEventListener('resize', () => fitAddon.fit());
+
+// 웹소켓 연결 설정
+const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+const ws = new WebSocket(`${protocol}${location.host}/ws`);
+
+// 터미널 초기화 및 사용자 이름 입력 프롬프트
+term.writeln('Welcome to Narnia Web Terminal!');
+term.writeln('================================');
+term.write('Enter your username: ');
+
+let username = '';
+let password = '';
+let inputBuffer = '';
+let state = 'username'; // 상태: 'username', 'password', 'connected'
+
+// 웹소켓 연결이 성공했을 때
+ws.onopen = () => {
+    console.log('WebSocket connection established.');
+};
+
+// 웹소켓으로부터 메시지를 받았을 때 (백엔드 -> 프론트엔드)
+ws.onmessage = (event) => {
+    // 비밀번호 프롬프트가 오면 상태 변경
+    if (state !== 'connected' && event.data.includes('Password:')) {
+        state = 'password';
+    }
+    term.write(event.data);
+};
+
+// 웹소켓 연결이 닫혔을 때
+ws.onclose = () => {
+    term.writeln('\r\n\r\n[Connection closed]');
+};
+
+// 웹소켓 에러 발생 시
+ws.onerror = (error) => {
+    console.error('WebSocket Error:', error);
+    term.writeln('\r\n\r\n[An error occurred with the connection]');
+};
+
+// 터미널에서 사용자가 키를 입력했을 때 (프론트엔드 -> 백엔드)
+term.onData(data => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+
+    switch (state) {
+        case 'username':
+            // Enter 키 처리
+            if (data === '\r') {
+                username = inputBuffer;
+                if (username) {
+                    term.writeln('');
+                    // 사용자 이름을 JSON으로 백엔드에 전송
+                    ws.send(JSON.stringify({ type: 'auth', username: username }));
+                    inputBuffer = '';
+                    state = 'password'; // 다음 상태는 비밀번호 입력
+                    term.write('Enter your password: ');
+                } else {
+                    term.writeln('\r\nUsername cannot be empty.');
+                    term.write('Enter your username: ');
+                    inputBuffer = '';
+                }
+                return;
+            }
+            // Backspace 키 처리
+            if (data === '\x7f') {
+                if (inputBuffer.length > 0) {
+                    inputBuffer = inputBuffer.slice(0, -1);
+                    term.write('\b \b');
+                }
+                return;
+            }
+            // 일반 문자 입력
+            inputBuffer += data;
+            term.write(data);
+            break;
+
+        case 'password':
+            // Enter 키 처리
+            if (data === '\r') {
+                password = inputBuffer;
+                term.writeln('');
+                // 비밀번호를 JSON으로 백엔드에 전송
+                ws.send(JSON.stringify({ type: 'auth', password: password }));
+                inputBuffer = '';
+                state = 'connected'; // 연결 상태로 변경
+                return;
+            }
+            // Backspace 키 처리
+            if (data === '\x7f') {
+                if (inputBuffer.length > 0) {
+                    inputBuffer = inputBuffer.slice(0, -1);
+                    // 비밀번호는 화면에 보이지 않으므로 커서만 이동
+                }
+                return;
+            }
+            // 일반 문자 입력 (화면에 '*' 표시)
+            inputBuffer += data;
+            term.write('*');
+            break;
+
+        case 'connected':
+            // 연결된 후에는 모든 입력을 서버로 전송
+            ws.send(data);
+            break;
+    }
+});
