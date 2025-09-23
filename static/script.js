@@ -71,16 +71,15 @@ let fileToUpload = null;
 
 // --- Welcome Message ---
 const welcomeTips = 
-`Welcome to Narnia Web Terminal!\r\n\r\n` + 
-`Tips for getting started:\r\n` + 
-`1. Navigate the server with these commands:\r\n` + 
-`   - ls: List files and directories.\r\n` + 
-`   - cd [dir]: Change to a directory.\r\n` + 
-`   - cd ..: Go to the parent directory.\r\n` + 
-`   - pwd: Show your current directory.\r\n` + 
-`2. Use Ctrl+Shift+C (Copy) and Ctrl+Shift+V (Paste) in the terminal.\r\n` + 
-`3. Use the 'Upload' and 'Download' buttons for file transfers.\r\n`;
-
+`Welcome to Narnia Web Terminal!\r\n\r\n` +
+`시작 팁:\r\n` +
+`1. 다음 명령어로 서버를 탐색하세요:\r\n` +
+`   - ls: 파일 및 디렉토리 목록 보기\r\n` +
+`   - cd [디렉토리]: 디렉토리로 이동\r\n` +
+`   - cd ..: 상위 디렉토리로 이동\r\n` +
+`   - pwd: 현재 디렉토리 경로 보기\r\n` +
+`2. 터미널 내에서 Ctrl+Shift+C (복사) 와 Ctrl+Shift+V (붙여넣기) 를 사용하세요.\r\n` +
+`3. 'Upload' 와 'Download' 버튼으로 파일을 전송할 수 있습니다.\r\n`;
 // --- WebSocket Handlers ---
 ws.onopen = () => {
     console.log('WebSocket connection established.');
@@ -163,12 +162,16 @@ ws.onerror = (error) => {
 
 // --- Terminal Data Handler (User Input) ---
 term.onData(data => {
-    // Only forward data to server when fully connected
-    if (state === 'connected') {
-        ws.send(data);
-    }
-});
+        // Filter out the terminal identification response that causes "1;2c"
+        if (data === '\x1b[?1;2c') {
+            return;
+        }
 
+        // Only forward data to server when fully connected
+        if (state === 'connected') {
+            ws.send(data);
+        }
+    });
 // --- Login Logic ---
 function handleLogin() {
     username = usernameInput.value;
