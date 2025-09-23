@@ -1,9 +1,28 @@
 // Xterm.js 터미널 인스턴스 생성 및 FitAddon 적용
 const term = new Terminal({
+    fontFamily: "Consolas, 'Courier New', monospace",
     cursorBlink: true,
     theme: {
         background: '#000000',
-        foreground: '#ffffff',
+        foreground: '#FFFFFF',
+        cursor: '#FFFFFF',
+        selection: 'rgba(255, 255, 255, 0.3)',
+        black: '#2E3436',
+        red: '#CC0000',
+        green: '#4E9A06',
+        yellow: '#C4A000',
+        blue: '#3465A4',
+        magenta: '#75507B',
+        cyan: '#06989A',
+        white: '#D3D7CF',
+        brightBlack: '#555753',
+        brightRed: '#EF2929',
+        brightGreen: '#8AE234',
+        brightYellow: '#FCE94F',
+        brightBlue: '#729FCF',
+        brightMagenta: '#AD7FA8',
+        brightCyan: '#34E2E2',
+        brightWhite: '#EEEEEC'
     }
 });
 const fitAddon = new FitAddon.FitAddon();
@@ -11,8 +30,14 @@ term.loadAddon(fitAddon);
 
 // 터미널을 #terminal div에 마운트하고 화면 크기에 맞춤
 term.open(document.getElementById('terminal'));
-fitAddon.fit();
 window.addEventListener('resize', () => fitAddon.fit());
+
+// 터미널 크기 변경 시 백엔드에 알림
+term.onResize(({ cols, rows }) => {
+    if (ws.readyState === WebSocket.OPEN && state === 'connected') {
+        ws.send(JSON.stringify({ type: 'resize', cols: cols, rows: rows }));
+    }
+});
 
 // 웹소켓 연결 설정
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
@@ -31,6 +56,7 @@ let state = 'username'; // 상태: 'username', 'password', 'connected'
 // 웹소켓 연결이 성공했을 때
 ws.onopen = () => {
     console.log('WebSocket connection established.');
+    fitAddon.fit(); // 연결 후 터미널 크기 맞춤
 };
 
 // 웹소켓으로부터 메시지를 받았을 때 (백엔드 -> 프론트엔드)
@@ -98,6 +124,9 @@ term.onData(data => {
                 ws.send(JSON.stringify({ type: 'auth', password: password }));
                 inputBuffer = '';
                 state = 'connected'; // 연결 상태로 변경
+
+                // 연결 직후, 현재 터미널 크기를 백엔드에 전송
+                ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
                 return;
             }
             // Backspace 키 처리

@@ -86,9 +86,22 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # 6. 클라이언트 -> SSH 서버 데이터 전송 루프
         while True:
-            data = await websocket.receive_text()
+            message_str = await websocket.receive_text()
             if channel and not channel.closed:
-                channel.send(data)
+                try:
+                    # 메시지를 JSON으로 파싱 시도
+                    message_data = json.loads(message_str)
+                    msg_type = message_data.get("type")
+
+                    if msg_type == "resize":
+                        # 터미널 크기 조절
+                        cols = message_data.get("cols")
+                        rows = message_data.get("rows")
+                        if cols and rows:
+                            channel.resize_pty(width=cols, height=rows)
+                except json.JSONDecodeError:
+                    # JSON이 아닌 일반 텍스트 데이터(사용자 입력) 처리
+                    channel.send(message_str)
 
     except WebSocketDisconnect:
         print("Client disconnected")
@@ -113,4 +126,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
