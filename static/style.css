@@ -136,36 +136,55 @@ html, body {
     color: #61afef; /* Blue for directories */
 }
 
-/* --- Modal Footer for Upload --- */
-.modal-footer {
-    padding: 10px 15px;
-    border-top: 1px solid #555;
-    background-color: #2a2a2a;
+/* --- Login Modal --- */
+#login-modal {
+    position: fixed;
+    z-index: 300; /* Must be on top of everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-#modal-filename-input {
-    flex-grow: 1;
+#login-modal .modal-content {
+    width: 90%;
+    max-width: 350px;
+}
+
+#username-input, #password-input {
+    width: 100%;
     background-color: #111;
     border: 1px solid #555;
     color: #d1d1d1;
-    padding: 8px;
+    padding: 10px;
     font-family: monospace;
+    margin-bottom: 10px;
     border-radius: 4px;
 }
 
-#modal-confirm-btn {
+#login-btn {
+    width: 100%;
     background-color: #3465A4;
     color: white;
     border: none;
-    padding: 8px 15px;
+    padding: 10px 15px;
     border-radius: 4px;
     cursor: pointer;
-    margin-left: 10px;
 }
 
-#modal-confirm-btn:hover {
+#login-btn:hover {
     background-color: #729FCF;
+}
+
+#login-error-msg {
+    color: #e06c75; /* Red */
+    margin-bottom: 10px;
+    min-height: 1.2em;
+    text-align: center;
 }
 
 /* Custom Overlay Scrollbar for the Terminal */

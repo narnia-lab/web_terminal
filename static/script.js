@@ -43,31 +43,80 @@ term.onResize(({ cols, rows }) => {
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 const ws = new WebSocket(`${protocol}${location.host}/ws`);
 
-// 터미널 초기화 및 사용자 이름 입력 프롬프트
-term.writeln('Welcome to Narnia Web Terminal!');
-term.writeln('================================');
-term.write('Enter your username: ');
+// --- DOM Elements ---
+const loginModal = document.getElementById('login-modal');
+const usernameInput = document.getElementById('username-input');
+const passwordInput = document.getElementById('password-input');
+const loginBtn = document.getElementById('login-btn');
+const loginErrorMsg = document.getElementById('login-error-msg');
 
+const uploadBtn = document.getElementById('upload-btn');
+const downloadBtn = document.getElementById('download-btn');
+const fileInput = document.getElementById('file-input');
+
+const fileExplorerModal = document.getElementById('file-explorer-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const fileList = document.getElementById('file-list');
+const currentPathSpan = document.getElementById('current-path');
+const modalFooter = document.querySelector('.modal-footer');
+const filenameInput = document.getElementById('modal-filename-input');
+const confirmBtn = document.getElementById('modal-confirm-btn');
+
+// --- State Management ---
+let state = 'authenticating'; // 'authenticating', 'connected'
 let username = '';
 let password = '';
-let inputBuffer = '';
-let state = 'username'; // 상태: 'username', 'password', 'connected'
+let modalMode = 'download'; // 'download' or 'upload'
+let fileToUpload = null;
 
-// 웹소켓 연결이 성공했을 때
+// --- Welcome Message ---
+const welcomeArt = `
+` +
+`███╗   ██╗██████╗ ███╗   ██╗██╗  ██╗
+` +
+`████╗  ██║██╔══██╗████╗  ██║██║  ██║
+` +
+`██╔██╗ ██║██████╔╝██╔██╗ ██║██║  ██║
+` +
+`██║╚██╗██║██╔══██╗██║╚██╗██║██║  ██║
+` +
+`██║ ╚████║██║  ██║██║ ╚████║╚██████╔╝
+` +
+`╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝
+
+`;
+const welcomeTips = 
+`Welcome to Narnia Web Terminal!
+
+` + 
+`Tips for getting started:
+` + 
+`1. Use 'ls -la', 'cd', 'pwd' to navigate the remote server.
+` + 
+`2. Use the 'Upload' and 'Download' buttons for file transfers.
+` + 
+`3. This is a standard SSH shell. Most common linux commands will work.
+`;
+
+// --- WebSocket Handlers ---
 ws.onopen = () => {
     console.log('WebSocket connection established.');
-    fitAddon.fit(); // 연결 후 터미널 크기 맞춤
+    fitAddon.fit();
+    usernameInput.focus();
 };
 
-// 웹소켓으로부터 메시지를 받았을 때 (백엔드 -> 프론트엔드)
 ws.onmessage = (event) => {
+    // --- JSON Message Handling ---
     try {
         const message_data = JSON.parse(event.data);
 
         if (message_data.type === 'auth_success') {
             state = 'connected';
+            loginModal.style.display = 'none'; // Hide login modal
             uploadBtn.disabled = false;
             downloadBtn.disabled = false;
+            term.writeln(welcomeArt.replace(/\n/g, '\r\n'));
+            term.writeln(welcomeTips.replace(/\n/g, '\r\n'));
             term.write(message_data.message);
             ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
             return;
@@ -88,138 +137,110 @@ ws.onmessage = (event) => {
             return;
         }
     } catch (e) {
-        // JSON 파싱 실패 시, 아래의 일반 텍스트 처리 로직으로 넘어갑니다.
+        // Not a JSON message, treat as plain text.
     }
 
-    // 일반 텍스트 데이터 처리
-    if (state !== 'connected' && event.data.includes('Password:')) {
-        state = 'password';
+    // --- Plain Text Message Handling ---
+    const textData = event.data;
+
+    if (state === 'authenticating') {
+        if (textData.includes('Password:')) {
+            // Server is asking for the password, send it.
+            ws.send(JSON.stringify({ type: 'auth', password: password }));
+        } else if (textData.includes('Authentication failed')) {
+            loginErrorMsg.textContent = 'Authentication failed. Please try again.';
+            passwordInput.value = '';
+            passwordInput.focus();
+        } else {
+            // Other messages during auth (like connection info)
+            term.write(textData);
+        }
+    } else {
+        // Once connected, all text goes to the terminal.
+        term.write(textData);
     }
-    term.write(event.data);
 };
 
-// 웹소켓 연결이 닫혔을 때
 ws.onclose = () => {
-    uploadBtn.disabled = true; // 업로드 버튼 비활성화
-    downloadBtn.disabled = true; // 다운로드 버튼 비활성화
-    closeModal(); // 모달이 열려있으면 닫기
+    uploadBtn.disabled = true;
+    downloadBtn.disabled = true;
+    closeFileExplorer();
+    if (state !== 'connected') {
+        loginModal.style.display = 'flex';
+        loginErrorMsg.textContent = 'Connection closed. Please try logging in again.';
+    }
     term.writeln('\r\n\r\n[Connection closed]');
 };
 
-// 웹소켓 에러 발생 시
 ws.onerror = (error) => {
     console.error('WebSocket Error:', error);
     term.writeln('\r\n\r\n[An error occurred with the connection]');
 };
 
-// 터미널에서 사용자가 키를 입력했을 때 (프론트엔드 -> 백엔드)
+// --- Terminal Data Handler (User Input) ---
 term.onData(data => {
-    if (ws.readyState !== WebSocket.OPEN) return;
-
-    switch (state) {
-        case 'username':
-            // Enter 키 처리
-            if (data === '\r') {
-                username = inputBuffer;
-                if (username) {
-                    term.writeln('');
-                    // 사용자 이름을 JSON으로 백엔드에 전송
-                    ws.send(JSON.stringify({ type: 'auth', username: username }));
-                    inputBuffer = '';
-                    // 서버가 "Password:" 프롬프트를 보내주면 onmessage 핸들러가 state를 변경할 것임
-                } else {
-                    term.writeln('\r\nUsername cannot be empty.');
-                    term.write('Enter your username: ');
-                    inputBuffer = '';
-                }
-                return;
-            }
-            // Backspace 키 처리
-            if (data === '\x7f') {
-                if (inputBuffer.length > 0) {
-                    inputBuffer = inputBuffer.slice(0, -1);
-                    term.write('\b \b');
-                }
-                return;
-            }
-            // 일반 문자 입력
-            inputBuffer += data;
-            term.write(data);
-            break;
-
-        case 'password':
-            // Enter 키 처리
-            if (data === '\r') {
-                password = inputBuffer;
-                term.writeln('');
-                // 비밀번호를 JSON으로 백엔드에 전송
-                ws.send(JSON.stringify({ type: 'auth', password: password }));
-                inputBuffer = '';
-                // DO NOT change state or enable buttons here. Wait for server confirmation.
-                return;
-            }
-            // Backspace 키 처리
-            if (data === '\x7f') {
-                if (inputBuffer.length > 0) {
-                    inputBuffer = inputBuffer.slice(0, -1);
-                    // 비밀번호는 화면에 보이지 않으므로 커서만 이동
-                }
-                return;
-            }
-            // 일반 문자 입력 (화면에 '*' 표시)
-            inputBuffer += data;
-            term.write('*');
-            break;
-
-        case 'connected':
-            // 연결된 후에는 모든 입력을 서버로 전송
-            ws.send(data);
-            break;
+    // Only forward data to server when fully connected
+    if (state === 'connected') {
+        ws.send(data);
     }
 });
 
-// --- 파일 탐색기 및 업로드/다운로드 로직 ---
-const uploadBtn = document.getElementById('upload-btn');
-const downloadBtn = document.getElementById('download-btn');
-const fileInput = document.getElementById('file-input');
-const modal = document.getElementById('file-explorer-modal');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const fileList = document.getElementById('file-list');
-const currentPathSpan = document.getElementById('current-path');
-const modalFooter = document.querySelector('.modal-footer');
-const filenameInput = document.getElementById('modal-filename-input');
-const confirmBtn = document.getElementById('modal-confirm-btn');
+// --- Login Logic ---
+function handleLogin() {
+    username = usernameInput.value;
+    password = passwordInput.value;
 
-let modalMode = 'download'; // 'download' or 'upload'
-let fileToUpload = null;
+    if (!username || !password) {
+        loginErrorMsg.textContent = 'Username and password cannot be empty.';
+        return;
+    }
 
-// 터미널 프롬프트에서 현재 경로를 파싱
+    loginErrorMsg.textContent = ''; // Clear previous errors
+
+    // Start the auth process by sending the username
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'auth', username: username }));
+    } else {
+        loginErrorMsg.textContent = 'Not connected to server. Please wait.';
+    }
+}
+
+loginBtn.addEventListener('click', handleLogin);
+passwordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        handleLogin();
+    }
+});
+usernameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        passwordInput.focus();
+    }
+});
+
+
+// --- File Explorer Logic ---
+
 function findPwdInTerminal() {
-    // user@host:~/path$ 또는 root@host:/path# 같은 형식의 프롬프트에서 경로를 찾음
     const promptRegex = /:([^$#\s]+)\s*[$#]\s*$/;
-
     for (let i = term.buffer.active.cursorY; i >= 0; i--) {
         const line = term.buffer.active.getLine(i).translateToString();
         const match = line.match(promptRegex);
         if (match && match[1]) {
             let path = match[1];
-            // '~'를 사용자의 홈 디렉토리로 치환
             if (path.startsWith('~')) {
                 path = path.replace('~', `/home/${username}`);
             }
             return path;
         }
     }
-    return null; // 경로를 찾지 못한 경우
+    return null;
 }
 
-// 모달 닫기
-function closeModal() {
-    modal.classList.add('modal-hidden');
+function closeFileExplorer() {
+    fileExplorerModal.classList.add('modal-hidden');
 }
 
-// 모달 열기
-function openModal(mode, options = {}) {
+function openFileExplorer(mode, options = {}) {
     modalMode = mode;
     if (modalMode === 'upload') {
         modalFooter.style.display = 'flex';
@@ -227,43 +248,36 @@ function openModal(mode, options = {}) {
     } else {
         modalFooter.style.display = 'none';
     }
-    modal.classList.remove('modal-hidden');
+    fileExplorerModal.classList.remove('modal-hidden');
 }
 
-// 파일 목록 렌더링
 function renderFileList(path, files) {
     currentPathSpan.textContent = path;
-    fileList.innerHTML = ''; // 목록 초기화
-
-    // 상위 디렉토리('..') 추가
+    fileList.innerHTML = '';
     if (path !== '/') {
         const parentLi = document.createElement('li');
         parentLi.textContent = '..';
         parentLi.dataset.type = 'dir';
         parentLi.addEventListener('click', () => {
-            const parentPath = path.replace(/\/?[^\/]+\/?$/, '') || '/';
+            const parentPath = path.replace(/\/[^\/]+\/?$/, '') || '/';
             fetchAndRenderFiles(parentPath);
         });
         fileList.appendChild(parentLi);
     }
-
     files.forEach(file => {
         const li = document.createElement('li');
         li.textContent = file.name;
         li.dataset.type = file.type;
-        
         const fullPath = (path.endsWith('/') ? path : path + '/') + file.name;
-
         if (file.type === 'dir') {
             li.addEventListener('click', () => fetchAndRenderFiles(fullPath));
         } else {
             li.addEventListener('click', () => {
                 if (modalMode === 'download') {
-                    term.writeln(`\r\n[Requesting download for ${fullPath}...]`);
+                    term.writeln(`\r\n[Requesting download for ${fullPath}... ]`);
                     ws.send(JSON.stringify({ type: 'download', path: fullPath }));
-                    closeModal();
+                    closeFileExplorer();
                 } else if (modalMode === 'upload') {
-                    // 업로드 모드에서 파일을 클릭하면 파일명 입력창에 해당 파일명을 채워넣음
                     filenameInput.value = file.name;
                 }
             });
@@ -272,7 +286,6 @@ function renderFileList(path, files) {
     });
 }
 
-// 서버에 파일 목록 요청
 function fetchAndRenderFiles(path) {
     if (ws.readyState === WebSocket.OPEN) {
         fileList.innerHTML = '<li>Loading...</li>';
@@ -280,7 +293,6 @@ function fetchAndRenderFiles(path) {
     }
 }
 
-// Base64 데이터를 Blob으로 변환 후 다운로드 실행
 function triggerDownload(filename, base64Data) {
     const byteCharacters = atob(base64Data);
     const byteNumbers = new Array(byteCharacters.length);
@@ -289,7 +301,6 @@ function triggerDownload(filename, base64Data) {
     }
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: 'application/octet-stream' });
-
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -299,47 +310,40 @@ function triggerDownload(filename, base64Data) {
     URL.revokeObjectURL(link.href);
 }
 
-// --- 이벤트 리스너 설정 ---
-closeModalBtn.addEventListener('click', closeModal);
+// --- File Transfer Event Listeners ---
+closeModalBtn.addEventListener('click', closeFileExplorer);
 
-// 모달의 Confirm 버튼 클릭 (업로드 실행)
 confirmBtn.addEventListener('click', () => {
     if (!fileToUpload) {
         term.writeln('\r\n[Upload error: No file selected.]');
         return;
     }
-
     const currentDir = currentPathSpan.textContent;
     const finalName = filenameInput.value;
     if (!finalName) {
         term.writeln('\r\n[Upload error: Filename cannot be empty.]');
         return;
     }
-
     const destinationPath = (currentDir.endsWith('/') ? currentDir : currentDir + '/') + finalName;
-
     const reader = new FileReader();
     reader.onload = (e) => {
-        term.writeln(`\r\n[Uploading ${fileToUpload.name} to ${destinationPath}...]`);
+        term.writeln(`\r\n[Uploading ${fileToUpload.name} to ${destinationPath}... ]`);
         const base64Data = e.target.result.split(',', 2)[1];
         ws.send(JSON.stringify({
             type: 'upload',
             path: destinationPath,
             data: base64Data
         }));
-        // Cleanup after sending
-        closeModal();
+        closeFileExplorer();
         fileToUpload = null;
         fileInput.value = '';
     };
     reader.onerror = () => {
         term.writeln(`\r\n[Error reading file: ${fileToUpload.name}]`);
-        // Cleanup on error too
-        closeModal();
+        closeFileExplorer();
         fileToUpload = null;
         fileInput.value = '';
     };
-    
     reader.readAsDataURL(fileToUpload);
 });
 
@@ -357,7 +361,7 @@ downloadBtn.addEventListener('click', () => {
         return;
     }
     const pwd = findPwdInTerminal();
-    openModal('download');
+    openFileExplorer('download');
     fetchAndRenderFiles(pwd || `/home/${username}`);
 });
 
@@ -366,8 +370,7 @@ fileInput.addEventListener('change', (event) => {
     if (!fileToUpload) {
         return;
     }
-
     const pwd = findPwdInTerminal();
-    openModal('upload', { filename: fileToUpload.name });
+    openFileExplorer('upload', { filename: fileToUpload.name });
     fetchAndRenderFiles(pwd || `/home/${username}`);
 });

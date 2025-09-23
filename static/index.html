@@ -8,6 +8,22 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
 </head>
 <body>
+    <div id="login-modal">
+        <div class="modal-content" style="height: auto;">
+            <div class="modal-header">
+                <span>Narnia Web Terminal Login</span>
+            </div>
+            <div class="modal-body">
+                <div id="login-error-msg"></div>
+                <input type="text" id="username-input" placeholder="Username" autocomplete="username" />
+                <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
+                <div class="modal-buttons">
+                    <button id="login-btn">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="terminal"></div>
 
     <div id="file-explorer-modal" class="modal-hidden">
