@@ -70,6 +70,7 @@ ws.onmessage = (event) => {
 
 // 웹소켓 연결이 닫혔을 때
 ws.onclose = () => {
+    uploadBtn.disabled = true; // 업로드 버튼 비활성화
     term.writeln('\r\n\r\n[Connection closed]');
 };
 
@@ -124,6 +125,7 @@ term.onData(data => {
                 ws.send(JSON.stringify({ type: 'auth', password: password }));
                 inputBuffer = '';
                 state = 'connected'; // 연결 상태로 변경
+                uploadBtn.disabled = false; // 업로드 버튼 활성화
 
                 // 연결 직후, 현재 터미널 크기를 백엔드에 전송
                 ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -147,4 +149,53 @@ term.onData(data => {
             ws.send(data);
             break;
     }
+});
+
+// --- 파일 업로드 로직 ---
+const uploadBtn = document.getElementById('upload-btn');
+const fileInput = document.getElementById('file-input');
+
+uploadBtn.addEventListener('click', () => {
+    // 연결된 상태에서만 업로드 버튼 활성화
+    if (state !== 'connected') {
+        term.writeln('\r\n[Please connect to the server before uploading files.]');
+        return;
+    }
+    fileInput.click(); // 숨겨진 파일 입력창 클릭
+});
+
+fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    const destinationPath = prompt(`Enter the destination path for "${file.name}" on the server:`, `/home/${username}/${file.name}`);
+    if (!destinationPath) {
+        term.writeln('\r\n[Upload cancelled.]');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        term.writeln(`\r\n[Uploading ${file.name} to ${destinationPath}...]`);
+        
+        // e.target.result는 "data:;base64,xxxxx" 형태이므로, 콤마 뒤의 base64 데이터만 추출
+        const base64Data = e.target.result.split(',', 2)[1];
+
+        ws.send(JSON.stringify({
+            type: 'upload',
+            path: destinationPath,
+            data: base64Data
+        }));
+    };
+
+    reader.onerror = () => {
+        term.writeln(`\r\n[Error reading file: ${file.name}]`);
+    };
+
+    reader.readAsDataURL(file);
+
+    // 다음에 같은 파일을 다시 선택할 수 있도록 입력값 초기화
+    fileInput.value = '';
 });
