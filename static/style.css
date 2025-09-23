@@ -26,7 +26,7 @@ html, body {
 }
 
 #upload-btn, #download-btn {
-    background-color: #3465A4; /* Ubuntu blue */
+    background-color: #2E8B57; /* SeaGreen */
     color: white;
     border: none;
     padding: 10px 15px;
@@ -36,7 +36,7 @@ html, body {
 }
 
 #upload-btn:hover, #download-btn:hover {
-    background-color: #729FCF;
+    background-color: #3CB371; /* MediumSeaGreen */
 }
 
 #upload-btn:disabled, #download-btn:disabled {
@@ -85,6 +85,10 @@ html, body {
     justify-content: space-between;
     align-items: center;
     background-color: #2a2a2a;
+}
+
+.modal-header span {
+    color: #FFFFFF; /* White text for modal titles */
 }
 
 #current-path {
@@ -168,7 +172,7 @@ html, body {
 
 #login-btn {
     width: 100%;
-    background-color: #3465A4;
+    background-color: #2E8B57; /* SeaGreen */
     color: white;
     border: none;
     padding: 10px 15px;
@@ -177,7 +181,7 @@ html, body {
 }
 
 #login-btn:hover {
-    background-color: #729FCF;
+    background-color: #3CB371; /* MediumSeaGreen */
 }
 
 #login-error-msg {
@@ -218,4 +222,37 @@ html, body {
 
 .xterm-viewport::-webkit-scrollbar-thumb:hover {
     background-color: #888; /* More visible on thumb hover */
+}
+
+#modal-confirm-btn {
+    background-color: #2E8B57; /* SeaGreen */
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#modal-confirm-btn:hover {
+    background-color: #3CB371; /* MediumSeaGreen */
+}
+
+/* --- Modal Footer for Upload --- */
+.modal-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #555;
+    background-color: #2a2a2a; /* Match header background */
+    display: flex;
+    align-items: center;
+}
+
+#modal-filename-input {
+    flex-grow: 1;
+    background-color: #111;
+    border: 1px solid #555;
+    color: #d1d1d1;
+    padding: 8px;
+    font-family: monospace;
+    border-radius: 4px;
 }
