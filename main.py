@@ -85,9 +85,11 @@ async def websocket_endpoint(websocket: WebSocket):
         # --- 인증 성공 후 처리 ---
         channel = await asyncio.to_thread(ssh_client.invoke_shell)
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
+        initial_path = await asyncio.to_thread(sftp.getcwd)
         await websocket.send_text(json.dumps({
             "type": "auth_success",
-            "message": "Connection successful!\r\n\r\n"
+            "message": "Connection successful!\r\n\r\n",
+            "initial_path": initial_path
         }))
 
         async def forward_ssh_to_ws():

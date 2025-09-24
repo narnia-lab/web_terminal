@@ -68,6 +68,7 @@ let username = '';
 let password = '';
 let modalMode = 'download'; // 'download' or 'upload'
 let fileToUpload = null;
+let currentRemotePath = ''; // To track the remote path for the file explorer
 
 // --- Welcome Message ---
 const welcomeTips = 
@@ -98,6 +99,7 @@ ws.onmessage = (event) => {
             loginModal.style.display = 'none'; // Hide login modal
             uploadBtn.disabled = false;
             downloadBtn.disabled = false;
+            currentRemotePath = message_data.initial_path; // Store initial path
             term.writeln(welcomeTips.replace(/\n/g, '\r\n'));
             term.write(message_data.message);
             ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -114,6 +116,7 @@ ws.onmessage = (event) => {
             if (message_data.error) {
                 fileList.innerHTML = `<li>Error: ${message_data.error}</li>`;
             } else {
+                currentRemotePath = message_data.path; // Update path on navigation
                 renderFileList(message_data.path, message_data.files);
             }
             return;
@@ -222,19 +225,24 @@ usernameInput.addEventListener('keydown', (e) => {
 // --- File Explorer Logic ---
 
 function findPwdInTerminal() {
+    // This regex is designed to find a path in a typical shell prompt
+    // like "user@host:~/some/path$" or "[user@host path]$ ".
     const promptRegex = /:([^$#\s]+)\s*[$#]\s*$/;
+    // Search from the cursor upwards to find the last prompt
     for (let i = term.buffer.active.cursorY; i >= 0; i--) {
         const line = term.buffer.active.getLine(i).translateToString();
         const match = line.match(promptRegex);
         if (match && match[1]) {
             let path = match[1];
+            // Expand tilde `~` to the home directory
             if (path.startsWith('~')) {
+                // Expand tilde `~` to the home directory using the username
                 path = path.replace('~', `/home/${username}`);
             }
             return path;
         }
     }
-    return null;
+    return null; // Return null if no path is found
 }
 
 function closeFileExplorer() {
@@ -361,9 +369,9 @@ downloadBtn.addEventListener('click', () => {
         term.writeln('\r\n[Please connect to the server before downloading files.]');
         return;
     }
-    const pwd = findPwdInTerminal();
+    const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('download');
-    fetchAndRenderFiles(pwd || `/home/${username}`);
+    fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
 });
 
 fileInput.addEventListener('change', (event) => {
@@ -371,9 +379,9 @@ fileInput.addEventListener('change', (event) => {
     if (!fileToUpload) {
         return;
     }
-    const pwd = findPwdInTerminal();
+    const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('upload', { filename: fileToUpload.name });
-    fetchAndRenderFiles(pwd || `/home/${username}`);
+    fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
 });
 
 // --- Custom Keyboard Shortcuts ---
