@@ -36,6 +36,11 @@ async def read_root():
     return FileResponse(os.path.join(static_path, 'index.html'))
 
 
+@app.get("/logo.png")
+async def logo():
+    return FileResponse(os.path.join(base_dir, 'logo.png'))
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """웹소켓 연결 및 전체 세션을 처리합니다."""
