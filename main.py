@@ -6,6 +6,7 @@ import os
 import sys
 import paramiko
 import stat
+import socket
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -204,10 +205,27 @@ async def websocket_endpoint(websocket: WebSocket):
         print("Connection closed.")
 
 
+def find_free_port(host="127.0.0.1", start_port=8001):
+    """Find an available TCP port."""
+    for port in range(start_port, 65535):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind((host, port))
+                return port
+            except OSError:
+                continue
+    raise IOError("No free ports found")
+
+
 if __name__ == "__main__":
-    print("="*50)
-    print("웹 터미널 서버가 시작되었습니다.")
-    print("아래 주소를 클릭하여 웹 브라우저에서 접속하세요:")
-    print("http://127.0.0.1:8001")
-    print("="*50)
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    host = "127.0.0.1"
+    try:
+        port = find_free_port(host)
+        print("="*50)
+        print("웹 터미널 서버가 시작되었습니다.")
+        print("아래 주소를 클릭하여 웹 브라우저에서 접속하세요:")
+        print(f"http://{host}:{port}")
+        print("="*50)
+        uvicorn.run(app, host=host, port=port)
+    except IOError as e:
+        print(f"Error: {e}")
