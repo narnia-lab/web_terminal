@@ -1,5 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
+#narnia-lab-title {
+    position: fixed;
+    top: 30px;
+    left: 20px;
+    font-size: 2em;
+    font-weight: 700;
+    z-index: 999;
+    height: 40px;
+    line-height: 40px;
+}
+
 :root {
     --primary-color: #0a0c1c;
     --secondary-color: #14182f;
@@ -46,6 +57,7 @@ html, body {
     z-index: 0;
     display: flex;
     overflow: hidden;
+    margin-top: 70px;
 }
 
 #terminal {
