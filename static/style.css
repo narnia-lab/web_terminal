@@ -18,7 +18,7 @@
 
 html, body {
     margin: 0;
-    padding: 0;
+    padding: 15px;
     height: 100%;
     width: 100%;
     background-color: var(--primary-color);
@@ -42,7 +42,17 @@ html, body {
     flex-grow: 1;
     width: 100%;
     height: 100%;
-    padding: 15px;
+    padding: 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+}
+
+/* Force xterm.js inner elements to be transparent */
+.xterm-screen, .xterm-viewport {
+    background: transparent !important;
 }
 
 .gradient-text {
