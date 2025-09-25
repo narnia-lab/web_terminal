@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://narnia-lab.github.io/home/sitemap.xml

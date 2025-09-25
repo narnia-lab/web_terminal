@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narnia Lab: AI 교육 플랫폼 소개</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #0a0c1c;
+            --secondary-color: #14182f;
+            --glass-bg: rgba(20, 24, 47, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-color: #FFFFFF;
+            --text-color-darker: rgba(255, 255, 255, 0.7);
+            --accent-color-1: #A044FF;
+            --accent-color-2: #00D2FF;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--primary-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        #tsparticles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .presentation-container {
+            width: 90%;
+            max-width: 1024px;
+            height: 90vh;
+            max-height: 768px;
+            position: relative;
+        }
+
+        .slide {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 25px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+            padding: 40px 60px;
+            box-sizing: border-box;
+            position: absolute;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--accent-color-1), var(--accent-color-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        h1 { font-size: 3em; margin-bottom: 20px; font-weight: 700; }
+        h2 { font-size: 2.2em; color: var(--text-color); margin-bottom: 30px; font-weight: 500; border-bottom: 3px solid var(--accent-color-2); padding-bottom: 10px; width: 100%; }
+        p { font-size: 1.3em; line-height: 1.7; max-width: 800px; color: var(--text-color-darker); }
+        .highlight { color: var(--accent-color-2); font-weight: 700; }
+
+        .presentation-container:hover .nav-button { opacity: 1; }
+        .nav-button { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0, 0, 0, 0.3); color: white; border: 1px solid var(--glass-border); border-radius: 50%; width: 40px; height: 40px; font-size: 24px; line-height: 40px; text-align: center; cursor: pointer; opacity: 0; transition: opacity 0.3s, background-color 0.3s; z-index: 10; }
+        .nav-button:hover { background-color: rgba(0, 0, 0, 0.6); border-color: var(--accent-color-1); }
+        #prevBtn { left: -50px; }
+        #nextBtn { right: -50px; }
+
+        .diagram { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; margin-top: 20px; flex-wrap: wrap; }
+        .diagram.single-line { flex-wrap: nowrap; }
+        .diagram a { text-decoration: none; color: inherit; display: block; }
+        .diagram-box { background: rgba(20, 24, 47, 0.6); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border-radius: 15px; border: 1px solid var(--glass-border); padding: 15px 20px; text-align: center; width: 210px; height: 180px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease; }
+        .diagram a:hover .diagram-box, .diagram-box:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.2); border-color: var(--accent-color-1); }
+        .diagram-box h4 { margin: 0 0 10px 0; color: var(--accent-color-2); font-size: 1.2em; }
+        .diagram-box ul { list-style-type: none; padding: 0; margin: 0; text-align: left; font-size: 0.9em; color: var(--text-color-darker); }
+        .diagram-box ul li { margin-bottom: 5px; padding-left: 15px; position: relative; }
+        .diagram-box ul li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-color-2); }
+        .diagram-arrow { font-size: 3.5em; color: var(--text-color-darker); font-weight: bold; }
+
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content { background: var(--glass-bg); border-radius: 20px; border: 1px solid var(--glass-border); padding: 30px 40px; width: 80%; max-width: 900px; max-height: 80vh; overflow-y: auto; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .modal-close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--text-color); font-size: 2.5rem; font-weight: bold; cursor: pointer; line-height: 1; }
+        .camp-card { background: rgba(20, 24, 47, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); padding: 1.5rem; text-align: left; margin-bottom: 20px; }
+        .camp-card h4 { font-size: 1.2em; font-weight: 700; margin-bottom: 1rem; color: var(--accent-color-2); }
+        .camp-card p { font-size: 1em; line-height: 1.5; margin-bottom: 0.5rem; }
+        .camp-card p strong { color: var(--text-color); font-weight: 700; }
+        .camp-card hr { border-color: rgba(255, 255, 255, 0.2); margin: 1rem 0; }
+        .camp-card h5 { font-size: 1.1em; font-weight: 700; margin-bottom: 0.8rem; }
+        .details-item { background-color: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 0.5rem; }
+        .details-item summary { padding: 0.8rem; font-weight: bold; cursor: pointer; outline: none; color: var(--text-color); list-style: none; position: relative; padding-left: 25px; }
+        .details-item summary::-webkit-details-marker { display: none; }
+        .details-item summary::before { content: '+'; position: absolute; left: 10px; font-size: 1.2em; transition: transform 0.2s; }
+        .details-item[open] summary::before { transform: rotate(45deg); }
+        .details-item[open] summary { color: var(--accent-color-1); }
+        .details-body { padding: 0 1rem 1rem 1rem; }
+        .details-body ul { list-style-type: none; padding-left: 0; }
+        .details-body li { display: flex; align-items: flex-start; margin-bottom: 0.5rem; font-size: 0.9em; }
+        .details-body li::before { content: '✓'; color: var(--accent-color-2); margin-right: 0.75rem; flex-shrink: 0; }
+
+        /* Roadmap/Timeline Styles */
+        .roadmap {
+            width: 100%;
+            max-width: 600px; /* Further reduced width */
+            margin-top: 30px;
+            position: relative;
+        }
+        .roadmap::before {
+            content: '';
+            position: absolute;
+            left: 30px;
+            top: 10px;
+            bottom: 10px;
+            width: 4px;
+            background-color: var(--glass-border);
+            border-radius: 2px;
+        }
+        .roadmap-item {
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 90px; /* Space for year circle + gap */
+            display: flex;
+            align-items: center; /* Ensures vertical alignment */
+            min-height: 90px;
+        }
+        .roadmap-item:last-child {
+            margin-bottom: 0;
+        }
+        .roadmap-year {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--primary-color);
+            background: linear-gradient(135deg, var(--accent-color-1), var(--accent-color-2));
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            text-align: center;
+            z-index: 1;
+        }
+        .roadmap-content {
+            background: rgba(20, 24, 47, 0.6);
+            border-radius: 10px;
+            padding: 15px 20px;
+            border: 1px solid var(--glass-border);
+            width: 100%;
+            text-align: left; /* Align text inside content box to the left */
+        }
+        .roadmap-content h4 {
+            margin: 0 0 10px 0;
+            color: var(--accent-color-2);
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+        .roadmap-content ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.95em;
+            color: var(--text-color-darker);
+        }
+        .roadmap-content ul li {
+            margin-bottom: 5px;
+            position: relative;
+            padding-left: 14px; /* Reduced padding */
+        }
+        .roadmap-content ul li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent-color-2);
+        }
+    </style>
+</head>
+<body>
+
+<div id="tsparticles"></div>
+<div class="presentation-container">
+    <button class="nav-button" id="prevBtn">&#10094;</button>
+    <button class="nav-button" id="nextBtn">&#10095;</button>
+
+    <!-- Slides -->
+    <div class="slide active"> <h1 class="gradient-text">Narnia Lab</h1> <p>AI와 함께 설계하고 몰입하며, 질문으로 성장하는 프로젝트 기반 미래 학습 플랫폼<br>AI Integrated Project-based Immersive Learning</p> </div>
+    <div class="slide"> <h2 class="gradient-text">Narnia Lab의 교육 철학</h2> <p>단순 코딩 교육을 넘어, 학생들이 AI를 지배하는 <span class="highlight">'Next-generation Architects'</span>로 성장하도록 돕습니다. 정답을 찾는 교육에서 벗어나 <span class="highlight">'질문하는 힘'</span>을 길러, 'How'를 넘어 'Why'와 'What if'를 탐구하며 문제 해결 능력과 창의적 사고를 기릅니다.</p> </div>
+    <div class="slide"> <h2 class="gradient-text">Gemini CLI: 통제된 AI 개발 환경</h2> <p>학생들은 강력한 Gemini API를 직접 호출하는 대신, Narnia Lab이 구축한 <span class="highlight">안전한 Linux 서버의 CLI 환경</span>을 통해 AI와 소통합니다. 이는 교육적 효과와 안전성을 동시에 확보하는 핵심적인 방식입니다.</p> </div>
+    <div class="slide"> <h2 class="gradient-text">핵심 아키텍처</h2> <div class="diagram single-line"> <div class="diagram-box"><h4>학생 (User)</h4><ul><li>CLI 명령어 입력</li><li>교육용 프롬프트 학습</li><li>AI 결과 확인</li></ul></div> <div class="diagram-arrow">↔</div> <div class="diagram-box"><h4>Narnia Lab 서버</h4><ul><li>안전 필터 적용</li><li>사용량 제어/모니터링</li><li>교육용 명령어셋 제공</li><li>API 호출 중계</li></ul></div> <div class="diagram-arrow">→</div> <div class="diagram-box"><h4>Google Gemini API</h4><ul><li>최신 AI 모델</li><li>강력한 언어 처리</li><li>다양한 기능 제공</li></ul></div> </div> <p style="margin-top: 30px;">학생들은 Narnia Lab의 서버라는 <span class="highlight">안전한 가드레일</span> 안에서 Gemini API의 강력한 성능을 경험합니다.</p> </div>
+    <div class="slide"> <h2 class="gradient-text">주요 교육 대상</h2> <p>AI 기술에 대한 순수한 호기심과 탐구심을 가진 <span class="highlight">초등 고학년, 중학생, 고등학생</span>을 위한 체계적이고 안전한 AI 첫걸음을 제공합니다. 실제로 초등학생들이 스스로 게임과 AI 학습 도우미를 개발하는 놀라운 성과를 보였습니다.</p> </div>
+    <div class="slide"> <h2 class="gradient-text">학생들의 실제 결과물</h2> <div class="diagram"> <a href="https://ehoili.github.io/ai-helper/" target="_blank"><div class="diagram-box" style="width: 200px; height: 150px;"><h4>AI Helper</h4><ul><li>AI 학습 도우미</li><li><strong>김태인 (초6)</strong></li></ul></div></a> <a href="https://park-seo-jun.github.io/blue/" target="_blank"><div class="diagram-box" style="width: 200px; height: 150px;"><h4>Blue</h4><ul><li>2D RPG 게임</li><li><strong>박서준 (초6)</strong></li></ul></div></a> <a href="https://mo0118mo-glitch.github.io/-rpg_game-GPR-/" target="_blank"><div class="diagram-box" style="width: 200px; height: 150px;"><h4>GPR</h4><ul><li>2D RPG 게임</li><li><strong>김선우 (초6)</strong></li></ul></div></a> <a href="https://fossil-leo.github.io/mcdonald" target="_blank"><div class="diagram-box" style="width: 200px; height: 150px;"><h4>Mcdonald</h4><ul><li>2D 타이쿤 게임</li><li><strong>김범준 (초4)</strong></li></ul></div></a> <a href="https://gjldadsfjsdfj.github.io/-/" target="_blank"><div class="diagram-box" style="width: 200px; height: 150px;"><h4>Cutting time!</h4><ul><li>2D 플랫포머 게임</li><li><strong>최승재 (초4)</strong></li></ul></div></a> </div> <p style="margin-top: 20px; font-size: 1.1em;">어린 학생들이 <span class="highlight">전문 개발자처럼</span> 아이디어를 현실로 만들어낸 결과물입니다. (카드를 클릭하여 실제 게임을 확인해보세요)</p> </div>
+    <div class="slide"> <h2 class="gradient-text">체계적인 교육 과정</h2> <div class="diagram"> <div class="diagram-box" id="publicTrackBox" style="cursor: pointer;"> <h4>Public Track</h4> <ul> <li>10명 이상 그룹</li> <li>체험, 기본기 중심</li> <li>AI 동화책 만들기</li> <li>미니게임 개발</li> </ul> </div> <div class="diagram-arrow">→</div> <div class="diagram-box" id="eliteTrackBox" style="cursor: pointer;"> <h4>Elite Track</h4> <ul> <li>1~5명 소수정예</li> <li>심화 실습, 멘토링</li> <li>AI 튜터 챗봇 개발</li> <li>AI 모델 성능 분석</li> <li>MVP 개발 (창업 연계)</li> </ul> </div> </div> <p style="margin-top: 30px; font-size: 1.1em;">체험부터 심화, 창업 연계까지 이어지는 <span class="highlight">단계별 커리큘럼</span>을 제공합니다. (상자를 클릭하여 세부 내용 확인)</p> </div>
+    <div class="slide"> <h2 class="gradient-text">이 방식의 장점</h2> <p>무분별한 AI 사용이 아닌, <span class="highlight">명확한 교육 목표</span>를 가진 상호작용을 통해 AI의 원리를 더 깊이 이해할 수 있습니다. 또한, 서버 단에서의 통제를 통해 <span class="highlight">비용 및 유해 콘텐츠 문제를 원천적으로 차단</span>합니다.</p> </div>
+    <div class="slide">
+        <h2 class="gradient-text">사업화 계획 (Roadmap)</h2>
+        <div class="roadmap">
+            <div class="roadmap-item">
+                <div class="roadmap-year">25년</div>
+                <div class="roadmap-content">
+                    <h4>기반 마련 및 확장</h4>
+                    <ul>
+                        <li>여름방학 AI 캠프 운영</li>
+                        <li>소수정예 '엘리트 심화반' 운영 중</li>
+                        <li>울산대학교, 울산정보산업진흥원 학기중 클래스 및 겨울 캠프</li>
+                        <li>울산대학교 협력 공공 교육 모델 개발 (하반기)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-year">26년</div>
+                <div class="roadmap-content">
+                    <h4>공교육 진입</h4>
+                    <ul>
+                        <li>울산 선도 학교 운영</li>
+                        <li>울산광역시교육청 플랫폼 진입</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-year">27년</div>
+                <div class="roadmap-content">
+                    <h4>전국 단위 확장</h4>
+                    <ul>
+                        <li>전국 단위 공공 서비스 런칭</li>
+                        <li>자체 사교육 플랫폼 런칭</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide"> <h1 class="gradient-text">감사합니다</h1> <p>Narnia Lab과 함께할 미래 AI 인재들의 성장을 기대해주세요.</p> <br> <p style="font-size: 1.1em; font-weight: bold;">Narnia Lab</p> </div>
+</div>
+
+<!-- Modal for Curriculum Details -->
+<div id="curriculumModal" class="modal-overlay">
+    <div class="modal-content">
+        <button id="modalCloseBtn" class="modal-close-btn">&times;</button>
+        <div id="modalPublicContent">
+            <h2 class="gradient-text" style="margin-bottom: 20px;">🌍 Public Track</h2>
+            <div class="camp-card"><h4>Level 0 - 체험반 (AI Beginner)</h4><p><strong>테마:</strong> AI로 만드는 나만의 그림 동화책</p><p><strong>프로젝트:</strong> 내 손글씨와 AI 그림으로 만드는 세상에 하나뿐인 동화책 (feat. 구글 북스)</p><p><strong>대상:</strong> 10명 이상, 체험과 기본기 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1차시: 스토리 기획 및 AI 이미지 생성</summary><div class="details-body"><ul><li>동화책의 주제와 줄거리 구상하기</li><li>Gemini를 활용해 주요 장면에 대한 이미지 프롬프트 작성 및 이미지 생성</li></ul></div></details><details class="details-item"><summary>2차시: 손글씨 원고 작업 및 동화책 편집</summary><div class="details-body"><ul><li>생성된 이미지에 맞춰 손글씨로 동화 내용 작성 및 디지털화</li><li>이미지와 손글씨 원고를 조합하여 디지털 동화책 페이지 편집</li></ul></div></details><details class="details-item"><summary>3차시: 구글 북스 출판 및 공유</summary><div class="details-body"><ul><li>완성된 동화책 파일을 구글 북스 파트너 센터에 업로드</li><li>자신의 책이 출판된 링크를 친구, 가족과 공유하기</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 1 - 기본반 (AI Starter)</h4><p><strong>테마:</strong> AI와 함께하는 게임 개발 입문</p><p><strong>프로젝트:</strong> AI 어시스턴트와 함께 만드는 미니게임</p><p><strong>대상:</strong> 10명 이상, 체험과 기본기 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1차시: 게임 기획 및 파이썬 기초</summary><div class="details-body"><ul><li>만들고 싶은 게임 아이디어 구체화</li><li>게임 개발에 필요한 파이썬 기본 문법 학습</li></ul></div></details><details class="details-item"><summary>2차시: AI와 함께 핵심 로직 코딩</summary><div class="details-body"><ul><li>Gemini에게 게임 규칙을 설명하고, 핵심 코드 초안을 함께 작성 및 수정</li></ul></div></details><details class="details-item"><summary>3차시: 기능 추가 및 디버깅</summary><div class="details-body"><ul><li>점수 시스템, 난이도 조절 등 추가 기능 구현</li><li>AI의 도움을 받아 코드의 오류를 찾아내고 해결</li></ul></div></details><details class="details-item"><summary>4차시: 플레이 테스트 및 공유회</summary><div class="details-body"><ul><li>친구들과 서로의 게임을 플레이하고 피드백 교환</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 2 - 심화반 (AI Founder)</h4><p><strong>테마:</strong> AI API를 활용한 나만의 소프트웨어 개발 (3개월 24시간 과정)</p><p><strong>프로젝트:</strong> '자유학기제 연계: AI 포트폴리오 프로젝트'</p><p><strong>대상:</strong> 10명 이상, 체험과 기본기 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-4차시: 진로 탐색과 AI 프로젝트 기획</summary><div class="details-body"><ul><li>자유학기제와 연계하여 자신의 관심 분야 및 미래 직업 탐색</li><li>Gemini를 활용해 관심 분야의 문제점을 발견하고 해결을 위한 프로젝트 아이디어 브레인스토밍</li><li>자신의 진로 탐색을 돕는 AI 도구를 컨셉으로 프로젝트 재정의</li></ul></div></details><details class="details-item"><summary>5-8차시: AI와 함께하는 프로토타입 개발</summary><div class="details-body"><ul><li>Git/GitHub로 협업 환경 구축</li><li>선택한 주제에 맞춰 AI 도우미의 기능 모듈 개발</li><li>Gemini에게 코드 생성, 디버깅을 요청하며 개발 파트너로 활용</li></ul></div></details><details class="details-item"><summary>9-12차시: 포트폴리오 제작 및 성장 발표회</summary><div class="details-body"><ul><li>개발 과정, 탐구 내용, 느낀 점을 담은 '나만의 성장 포트폴리오' 제작</li><li>완성된 프로토타입과 포트폴리오를 바탕으로 최종 발표회 진행</li><li>동료들과 프로젝트 경험을 공유하고 피드백</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 3 - 융합 프로젝트반 (AI Innovator)</h4><p><strong>테마:</strong> AI로 사회에 기여하기: 아이디어 기획부터 캠페인까지</p><p><strong>프로젝트:</strong> 우리 동네 문제 해결을 위한 AI 서비스 기획 및 홍보 캠페인</p><p><strong>대상:</strong> 10명 이상, 체험과 기본기 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-3차시: 문제 발견 및 팀 빌딩</summary><div class="details-body"><ul><li>우리 동네/학교의 문제점 토론 및 해결할 최종 문제 선정</li><li>팀 구성 및 역할 분담 (기획자, 콘텐츠 제작자 등)</li></ul></div></details><details class="details-item"><summary>4-6차시: AI 서비스 기획</summary><div class="details-body"><ul><li>선정한 문제 해결을 위한 AI 서비스 아이디어 구체화</li><li>Gemini를 활용해 서비스의 핵심 기능, 이름, 사용자 시나리오 정의</li></ul></div></details><details class="details-item"><summary>7-9차시: 홍보 캠페인 콘텐츠 제작</summary><div class="details-body"><ul><li>기획한 서비스를 알리기 위한 캠페인 전략 수립</li><li>Gemini와 AI 이미지 도구를 활용해 홍보용 스토리, 이미지, 영상 스크립트 등 제작</li></ul></div></details><details class="details-item"><summary>10-12차시: 최종 프로젝트 발표회</summary><div class="details-body"><ul><li>서비스 기획안과 제작한 홍보 콘텐츠를 함께 발표</li><li>모의 투자자/사용자 앞에서 프로젝트의 가치와 실현 가능성 어필</li></ul></div></details></div>
+        </div>
+        <div id="modalEliteContent">
+            <h2 class="gradient-text" style="margin-bottom: 20px;">🚀 Elite Track</h2>
+            <div class="camp-card"><h4>Level 1 - 기본반 (AI Starter)</h4><p><strong>테마:</strong> AI와 함께하는 게임 개발 입문</p><p><strong>프로젝트:</strong> AI 어시스턴트와 함께 만드는 미니 게임</p><p><strong>대상:</strong> 1~5명, 집중 멘토링·심화 실습 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-2차시: 게임 기획 및 파이썬 기초</summary><div class="details-body"><ul><li>게임 아이디어 구체화 및 파이썬 기본 문법 학습</li></ul></div></details><details class="details-item"><summary>3-4차시: AI와 함께 핵심 로직 코딩</summary><div class="details-body"><ul><li>Gemini를 활용한 핵심 코드 작성 및 수정</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 2 - 심화반 (AI Founder)</h4><p><strong>테마:</strong> AI API를 활용한 나만의 소프트웨어 개발</p><p><strong>프로젝트:</strong> 나를 위한 맞춤형 AI 튜터 챗봇 개발</p><p><strong>대상:</strong> 1~5명, 집중 멘토링·심화 실습 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-4차시: 기획 및 설계</summary><div class="details-body"><ul><li>Python, API 기초 및 개발 환경 구축</li><li>챗봇 페르소나, 기능, 대화 시나리오 기획</li></ul></div></details><details class="details-item"><summary>5-8차시: 핵심 기능 개발</summary><div class="details-body"><ul><li>Gemini API 연동 및 기본 응답 로직 구현</li><li>프롬프트 엔지니어링을 통한 답변 품질 고도화</li></ul></div></details><details class="details-item"><summary>9-12차시: UI 개발 및 발표</summary><div class="details-body"><ul><li>Streamlit을 활용한 웹 UI 개발 및 최종 발표</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 3 - 고급반 (AI Challenger)</h4><p><strong>테마:</strong> AI 융합 프로젝트, 협업과 포트폴리오 구축</p><p><strong>프로젝트:</strong> AI 모델 성능 비교 분석 연구</p><p><strong>대상:</strong> 1~5명, 집중 멘토링·심화 실습 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-4차시: 연구 설계</summary><div class="details-body"><ul><li>분석 과제 및 평가지표 설정</li><li>비교할 모델 및 프롬프트 전략 수립</li></ul></div></details><details class="details-item"><summary>5-8차시: 실험 및 데이터 수집</summary><div class="details-body"><ul><li>설계에 따라 실험 진행 및 결과 데이터 수집</li></ul></div></details><details class="details-item"><summary>9-12차시: 결과 분석 및 논문 작성</summary><div class="details-body"><ul><li>데이터 기반 성능 비교 분석 및 소논문 작성/발표</li></ul></div></details></div>
+            <div class="camp-card"><h4>Level 4 - 창업반 (AI Master)</h4><p><strong>테마:</strong> 아이디어에서 MVP까지, AI 서비스 창업가 되기</p><p><strong>프로젝트:</strong> 사회 문제 해결을 위한 AI 서비스 MVP 개발</p><p><strong>대상:</strong> 1~5명, 집중 멘토링·심화 실습 중심</p><hr><h5>차시별 진행 계획</h5><details class="details-item"><summary>1-4차시: 문제 정의 및 시장 분석</summary><div class="details-body"><ul><li>해결할 사회 문제 정의 및 유사 서비스 리서치</li></ul></div></details><details class="details-item"><summary>5-8차시: 솔루션 기획 및 프로토타입 개발</summary><div class="details-body"><ul><li>AI 서비스 핵심 기능(MVP) 정의 및 프로토타입 개발</li></ul></div></details><details class="details-item"><summary>9-12차시: 데모 데이</summary><div class="details-body"><ul><li>사업 계획서(IR) 발표 및 MVP 시연</li></ul></div></details></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tsparticles@2.5.3/tsparticles.bundle.min.js"></script>
+<script>
+    // Slide navigation
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    let currentSlide = 0;
+    function showSlide(n) { slides.forEach((slide, index) => { slide.classList.toggle('active', index === n); }); }
+    function nextSlide() { currentSlide = (currentSlide + 1) % slides.length; showSlide(currentSlide); }
+    function prevSlide() { currentSlide = (currentSlide - 1 + slides.length) % slides.length; showSlide(currentSlide); }
+    nextBtn.addEventListener('click', nextSlide);
+    prevBtn.addEventListener('click', prevSlide);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') nextSlide();
+        else if (e.key === 'ArrowLeft') prevSlide();
+    });
+    showSlide(currentSlide);
+
+    // tsParticles initialization
+    tsParticles.load("tsparticles", {
+        background: { color: { value: 'transparent' } },
+        fpsLimit: 60,
+        interactivity: { events: { onHover: { enable: true, mode: "repulse" }, resize: true }, modes: { repulse: { distance: 100, duration: 0.4 } } },
+        particles: { color: { value: "#ffffff" }, links: { color: "#ffffff", distance: 150, enable: true, opacity: 0.1, width: 1 }, move: { direction: "none", enable: true, outModes: { default: "bounce" }, random: false, speed: 1, straight: false }, number: { density: { enable: true, area: 800 }, value: 80 }, opacity: { value: 0.2 }, shape: { type: "circle" }, size: { value: { min: 1, max: 3 } } },
+        detectRetina: true,
+    });
+
+    // Modal Logic
+    const publicTrackBox = document.getElementById('publicTrackBox');
+    const eliteTrackBox = document.getElementById('eliteTrackBox');
+    const modal = document.getElementById('curriculumModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalPublicContent = document.getElementById('modalPublicContent');
+    const modalEliteContent = document.getElementById('modalEliteContent');
+
+    function openModal(track) {
+        if (track === 'public') {
+            modalPublicContent.style.display = 'block';
+            modalEliteContent.style.display = 'none';
+        } else {
+            modalPublicContent.style.display = 'none';
+            modalEliteContent.style.display = 'block';
+        }
+        modal.classList.add('show');
+    }
+
+    function closeModal() {
+        modal.classList.remove('show');
+    }
+
+    if (publicTrackBox) publicTrackBox.addEventListener('click', () => openModal('public'));
+    if (eliteTrackBox) eliteTrackBox.addEventListener('click', () => openModal('elite'));
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+</script>
+</body>
+</html>

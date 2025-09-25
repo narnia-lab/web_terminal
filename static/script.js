@@ -114,6 +114,7 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
+    console.log('Received WebSocket message:', event.data);
     try {
         const message_data = JSON.parse(event.data);
         switch (message_data.type) {
