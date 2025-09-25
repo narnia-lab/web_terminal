@@ -106,6 +106,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         data = channel.recv(1024)
                         if data:
                             await websocket.send_text(data.decode('utf-8', 'ignore'))
+                    await asyncio.sleep(0.01)
             except:
                 pass
 
