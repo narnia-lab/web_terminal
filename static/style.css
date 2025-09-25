@@ -52,7 +52,7 @@ html, body {
 #terminal-wrapper {
     flex-grow: 1;
     width: 100%;
-    padding: 20px 20px 10px 20px;
+    padding: 10px 10px 5px 10px;
     border-radius: 15px;
     z-index: 0;
     display: flex;
