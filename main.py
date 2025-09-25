@@ -8,6 +8,8 @@ import paramiko
 import stat
 import socket
 import uvicorn
+import webbrowser
+import threading
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -227,11 +229,13 @@ if __name__ == "__main__":
     host = "127.0.0.1"
     try:
         port = find_free_port(host)
+        url = f"http://{host}:{port}"
         print("="*50)
         print("웹 터미널 서버가 시작되었습니다.")
         print("아래 주소를 클릭하여 웹 브라우저에서 접속하세요:")
-        print(f"http://{host}:{port}")
+        print(url)
         print("="*50)
+        threading.Timer(1, lambda: webbrowser.open(url)).start()
         uvicorn.run(app, host=host, port=port)
     except IOError as e:
         print(f"Error: {e}")
