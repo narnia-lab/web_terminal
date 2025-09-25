@@ -1,45 +1,66 @@
-// Xterm.js 터미널 인스턴스 생성 및 FitAddon 적용
+// --- tsParticles Initialization ---
+tsParticles.load("tsparticles", {
+    background: { color: { value: 'transparent' } },
+    fpsLimit: 60,
+    interactivity: {
+        events: { onHover: { enable: true, mode: "repulse" }, resize: true },
+        modes: { repulse: { distance: 100, duration: 0.4 } }
+    },
+    particles: {
+        color: { value: "#ffffff" },
+        links: { color: "#ffffff", distance: 150, enable: true, opacity: 0.1, width: 1 },
+        move: { direction: "none", enable: true, outModes: { default: "bounce" }, random: false, speed: 1, straight: false },
+        number: { density: { enable: true, area: 800 }, value: 80 },
+        opacity: { value: 0.2 },
+        shape: { type: "circle" },
+        size: { value: { min: 1, max: 3 } }
+    },
+    detectRetina: true,
+});
+
+// --- Xterm.js Terminal Initialization ---
 const term = new Terminal({
     fontFamily: "Consolas, 'Courier New', monospace",
     cursorBlink: true,
     theme: {
-        background: '#000000',
-        foreground: '#d1d1d1',
-        cursor: '#d1d1d1',
-        selection: 'rgba(255, 255, 255, 0.3)',
-        black: '#000000',
+        background: 'transparent',
+        foreground: '#FFFFFF',
+        cursor: '#FFFFFF',
+        selectionBackground: 'rgba(0, 210, 255, 0.3)',
+        black: '#0a0c1c',
         red: '#e06c75',
         green: '#98c379',
         yellow: '#e5c07b',
         blue: '#61afef',
         magenta: '#c678dd',
-        cyan: '#56b6c2',
-        white: '#d1d1d1',
+        cyan: '#00D2FF', // Accent Color 2
+        white: '#FFFFFF',
         brightBlack: '#545454',
         brightRed: '#e06c75',
         brightGreen: '#98c379',
         brightYellow: '#e5c07b',
         brightBlue: '#61afef',
-        brightMagenta: '#c678dd',
-        brightCyan: '#56b6c2',
-        brightWhite: '#ffffff'
-    }
+        brightMagenta: '#A044FF', // Accent Color 1
+        brightCyan: '#00D2FF',
+        brightWhite: '#FFFFFF'
+    },
+    allowTransparency: true
 });
 const fitAddon = new FitAddon.FitAddon();
 term.loadAddon(fitAddon);
 
-// 터미널을 #terminal div에 마운트하고 화면 크기에 맞춤
+// Mount terminal and fit to screen
 term.open(document.getElementById('terminal'));
 window.addEventListener('resize', () => fitAddon.fit());
 
-// 터미널 크기 변경 시 백엔드에 알림
+// Notify backend on terminal resize
 term.onResize(({ cols, rows }) => {
     if (ws.readyState === WebSocket.OPEN && state === 'connected') {
         ws.send(JSON.stringify({ type: 'resize', cols: cols, rows: rows }));
     }
 });
 
-// 웹소켓 연결 설정
+// --- WebSocket Connection ---
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 const ws = new WebSocket(`${protocol}${location.host}/ws`);
 
@@ -68,20 +89,21 @@ let username = '';
 let password = '';
 let modalMode = 'download'; // 'download' or 'upload'
 let fileToUpload = null;
-let currentRemotePath = ''; // To track the remote path for the file explorer
+let currentRemotePath = '';
 
 // --- Welcome Message ---
-const welcomeTips = 
-`Welcome to Narnia Web Terminal!\r\n\r\n` +
-`시작 팁:\r\n` +
+const welcomeTips =
+`\x1b[1;36mWelcome to Narnia Web Terminal!\x1b[0m\r\n\r\n` +
+`\x1b[1m시작 팁:\x1b[0m\r\n` +
 `1. 다음 명령어로 서버를 탐색하세요:\r\n` +
-`   - ls: 파일 및 디렉토리 목록 보기\r\n` +
-`   - cd [디렉토리]: 디렉토리로 이동\r\n` +
-`   - cd ..: 상위 디렉토리로 이동\r\n` +
-`   - pwd: 현재 디렉토리 경로 보기\r\n` +
-`   - Ctrl+C: 현재 실행중인 명령어 중단\r\n` +
-`2. 터미널 내에서 Ctrl+Shift+C (복사) 와 Ctrl+Shift+V (붙여넣기) 를 사용하세요.\r\n` +
-`3. 'Upload' 와 'Download' 버튼으로 파일을 전송할 수 있습니다.\r\n`;
+`   - \x1b[32mls\x1b[0m: 파일 및 디렉토리 목록 보기\r\n` +
+`   - \x1b[32mcd [디렉토리]\x1b[0m: 디렉토리로 이동\r\n` +
+`   - \x1b[32mcd ..\x1b[0m: 상위 디렉토리로 이동\r\n` +
+`   - \x1b[32mpwd\x1b[0m: 현재 디렉토리 경로 보기\r\n` +
+`   - \x1b[31mCtrl+C\x1b[0m: 현재 실행중인 명령어 중단\r\n` +
+`2. 터미널 내에서 \x1b[33mCtrl+Shift+C\x1b[0m (복사) 와 \x1b[33mCtrl+Shift+V\x1b[0m (붙여넣기) 를 사용하세요.\r\n` +
+`3. '\x1b[35mUpload\x1b[0m' 와 '\x1b[35mDownload\x1b[0m' 버튼으로 파일을 전송할 수 있습니다.\r\n`;
+
 // --- WebSocket Handlers ---
 ws.onopen = () => {
     console.log('WebSocket connection established.');
@@ -90,61 +112,53 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
-    // --- JSON Message Handling ---
     try {
         const message_data = JSON.parse(event.data);
-
-        if (message_data.type === 'auth_success') {
-            state = 'connected';
-            loginModal.style.display = 'none'; // Hide login modal
-            uploadBtn.disabled = false;
-            downloadBtn.disabled = false;
-            currentRemotePath = message_data.initial_path; // Store initial path
-            term.writeln(welcomeTips.replace(/\n/g, '\r\n'));
-            term.write(message_data.message);
-            ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-            return;
-        } else if (message_data.type === 'download_response') {
-            if (message_data.error) {
-                term.writeln(`\r\n[Download failed: ${message_data.error}]`);
-            } else {
-                triggerDownload(message_data.filename, message_data.data);
-                term.writeln(`\r\n[File \"${message_data.filename}\" downloaded successfully.]`);
-            }
-            return;
-        } else if (message_data.type === 'list_files_response') {
-            if (message_data.error) {
-                fileList.innerHTML = `<li>Error: ${message_data.error}</li>`;
-            } else {
-                currentRemotePath = message_data.path; // Update path on navigation
-                renderFileList(message_data.path, message_data.files);
-            }
-            return;
+        switch (message_data.type) {
+            case 'auth_success':
+                state = 'connected';
+                loginModal.classList.add('modal-hidden');
+                uploadBtn.disabled = false;
+                downloadBtn.disabled = false;
+                currentRemotePath = message_data.initial_path;
+                term.writeln(welcomeTips);
+                term.write(message_data.message);
+                ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+                break;
+            case 'download_response':
+                if (message_data.error) {
+                    term.writeln(`\r\n\x1b[31m[Download failed: ${message_data.error}]\x1b[0m`);
+                } else {
+                    triggerDownload(message_data.filename, message_data.data);
+                    term.writeln(`\r\n\x1b[32m[File "${message_data.filename}" downloaded successfully.]\x1b[0m`);
+                }
+                break;
+            case 'list_files_response':
+                if (message_data.error) {
+                    fileList.innerHTML = `<li>Error: ${message_data.error}</li>`;
+                } else {
+                    currentRemotePath = message_data.path;
+                    renderFileList(message_data.path, message_data.files);
+                }
+                break;
         }
     } catch (e) {
-        // Not a JSON message, treat as plain text.
-    }
-
-    // --- Plain Text Message Handling ---
-    const textData = event.data;
-
-    if (state === 'authenticating') {
-        if (textData.includes('Password:')) {
-            // Server is asking for the password, send it.
-            ws.send(JSON.stringify({ type: 'auth', password: password }));
-        } else if (textData.includes('Authentication failed')) {
-            loginErrorMsg.textContent = 'Authentication failed. Please try again.';
-            passwordInput.value = '';
-            passwordInput.focus();
-            loginBtn.disabled = false;
-            loginBtn.textContent = 'Login';
+        const textData = event.data;
+        if (state === 'authenticating') {
+            if (textData.includes('Password:')) {
+                ws.send(JSON.stringify({ type: 'auth', password: password }));
+            } else if (textData.includes('Authentication failed')) {
+                loginErrorMsg.textContent = 'Authentication failed. Please try again.';
+                passwordInput.value = '';
+                passwordInput.focus();
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            } else {
+                term.write(textData);
+            }
         } else {
-            // Other messages during auth (like connection info)
             term.write(textData);
         }
-    } else {
-        // Once connected, all text goes to the terminal.
-        term.write(textData);
     }
 };
 
@@ -153,12 +167,12 @@ ws.onclose = () => {
     downloadBtn.disabled = true;
     closeFileExplorer();
     if (state !== 'connected') {
-        loginModal.style.display = 'flex';
+        loginModal.classList.remove('modal-hidden');
         loginErrorMsg.textContent = 'Connection failed. Please check the server and refresh.';
         loginBtn.disabled = false;
         loginBtn.textContent = 'Login';
     } else {
-        term.writeln('\r\n\r\n[Connection closed]');
+        term.writeln('\r\n\r\n\x1b[31m[Connection closed]\x1b[0m');
     }
 };
 
@@ -169,37 +183,27 @@ ws.onerror = (error) => {
         loginBtn.disabled = false;
         loginBtn.textContent = 'Login';
     } else {
-        term.writeln('\r\n\r\n[An error occurred with the connection]');
+        term.writeln('\r\n\r\n\x1b[31m[An error occurred with the connection]\x1b[0m');
     }
 };
 
-// --- Terminal Data Handler (User Input) ---
+// --- Terminal Data Handler ---
 term.onData(data => {
-        // Filter out the terminal identification response that causes "1;2c"
-        if (data === '\x1b[?1;2c') {
-            return;
-        }
+    if (data === '\x1b[?1;2c') return;
+    if (state === 'connected') ws.send(data);
+});
 
-        // Only forward data to server when fully connected
-        if (state === 'connected') {
-            ws.send(data);
-        }
-    });
 // --- Login Logic ---
 function handleLogin() {
     username = usernameInput.value;
     password = passwordInput.value;
-
     if (!username || !password) {
         loginErrorMsg.textContent = 'Username and password cannot be empty.';
         return;
     }
-
-    loginErrorMsg.textContent = ''; // Clear previous errors
+    loginErrorMsg.textContent = '';
     loginBtn.disabled = true;
     loginBtn.textContent = 'Logging in...';
-
-    // Start the auth process by sending the username
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'auth', username: username }));
     } else {
@@ -210,39 +214,24 @@ function handleLogin() {
 }
 
 loginBtn.addEventListener('click', handleLogin);
-passwordInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        handleLogin();
-    }
-});
-usernameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        passwordInput.focus();
-    }
-});
-
+passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') passwordInput.focus(); });
 
 // --- File Explorer Logic ---
-
 function findPwdInTerminal() {
-    // This regex is designed to find a path in a typical shell prompt
-    // like "user@host:~/some/path$" or "[user@host path]$ ".
     const promptRegex = /:([^$#\s]+)\s*[$#]\s*$/;
-    // Search from the cursor upwards to find the last prompt
     for (let i = term.buffer.active.cursorY; i >= 0; i--) {
         const line = term.buffer.active.getLine(i).translateToString();
         const match = line.match(promptRegex);
         if (match && match[1]) {
             let path = match[1];
-            // Expand tilde `~` to the home directory
             if (path.startsWith('~')) {
-                // Expand tilde `~` to the home directory using the username
                 path = path.replace('~', `/home/${username}`);
             }
             return path;
         }
     }
-    return null; // Return null if no path is found
+    return null;
 }
 
 function closeFileExplorer() {
@@ -251,11 +240,9 @@ function closeFileExplorer() {
 
 function openFileExplorer(mode, options = {}) {
     modalMode = mode;
+    modalFooter.style.display = (modalMode === 'upload') ? 'flex' : 'none';
     if (modalMode === 'upload') {
-        modalFooter.style.display = 'flex';
         filenameInput.value = options.filename || '';
-    } else {
-        modalFooter.style.display = 'none';
     }
     fileExplorerModal.classList.remove('modal-hidden');
 }
@@ -283,7 +270,7 @@ function renderFileList(path, files) {
         } else {
             li.addEventListener('click', () => {
                 if (modalMode === 'download') {
-                    term.writeln(`\r\n[Requesting download for ${fullPath}... ]`);
+                    term.writeln(`\r\n\x1b[36m[Requesting download for ${fullPath}... ]\x1b[0m`);
                     ws.send(JSON.stringify({ type: 'download', path: fullPath }));
                     closeFileExplorer();
                 } else if (modalMode === 'upload') {
@@ -319,36 +306,32 @@ function triggerDownload(filename, base64Data) {
     URL.revokeObjectURL(link.href);
 }
 
-// --- File Transfer Event Listeners ---
+// --- Event Listeners ---
 closeModalBtn.addEventListener('click', closeFileExplorer);
 
 confirmBtn.addEventListener('click', () => {
     if (!fileToUpload) {
-        term.writeln('\r\n[Upload error: No file selected.]');
+        term.writeln('\r\n\x1b[31m[Upload error: No file selected.]\x1b[0m');
         return;
     }
     const currentDir = currentPathSpan.textContent;
     const finalName = filenameInput.value;
     if (!finalName) {
-        term.writeln('\r\n[Upload error: Filename cannot be empty.]');
+        term.writeln('\r\n\x1b[31m[Upload error: Filename cannot be empty.]\x1b[0m');
         return;
     }
     const destinationPath = (currentDir.endsWith('/') ? currentDir : currentDir + '/') + finalName;
     const reader = new FileReader();
     reader.onload = (e) => {
-        term.writeln(`\r\n[Uploading ${fileToUpload.name} to ${destinationPath}... ]`);
+        term.writeln(`\r\n\x1b[36m[Uploading ${fileToUpload.name} to ${destinationPath}... ]\x1b[0m`);
         const base64Data = e.target.result.split(',', 2)[1];
-        ws.send(JSON.stringify({
-            type: 'upload',
-            path: destinationPath,
-            data: base64Data
-        }));
+        ws.send(JSON.stringify({ type: 'upload', path: destinationPath, data: base64Data }));
         closeFileExplorer();
         fileToUpload = null;
         fileInput.value = '';
     };
     reader.onerror = () => {
-        term.writeln(`\r\n[Error reading file: ${fileToUpload.name}]`);
+        term.writeln(`\r\n\x1b[31m[Error reading file: ${fileToUpload.name}]\x1b[0m`);
         closeFileExplorer();
         fileToUpload = null;
         fileInput.value = '';
@@ -357,18 +340,12 @@ confirmBtn.addEventListener('click', () => {
 });
 
 uploadBtn.addEventListener('click', () => {
-    if (state !== 'connected') {
-        term.writeln('\r\n[Please connect to the server before uploading files.]');
-        return;
-    }
+    if (state !== 'connected') return;
     fileInput.click();
 });
 
 downloadBtn.addEventListener('click', () => {
-    if (state !== 'connected') {
-        term.writeln('\r\n[Please connect to the server before downloading files.]');
-        return;
-    }
+    if (state !== 'connected') return;
     const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('download');
     fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
@@ -376,9 +353,7 @@ downloadBtn.addEventListener('click', () => {
 
 fileInput.addEventListener('change', (event) => {
     fileToUpload = event.target.files[0];
-    if (!fileToUpload) {
-        return;
-    }
+    if (!fileToUpload) return;
     const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('upload', { filename: fileToUpload.name });
     fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
@@ -387,13 +362,10 @@ fileInput.addEventListener('change', (event) => {
 // --- Custom Keyboard Shortcuts ---
 document.getElementById('terminal').addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-        e.preventDefault(); // Prevent developer tools from opening
+        e.preventDefault();
         const selection = term.getSelection();
         if (selection) {
-            navigator.clipboard.writeText(selection).then(() => {
-                term.clearSelection();
-                term.focus(); // Refocus the terminal
-            });
+            navigator.clipboard.writeText(selection).then(() => term.clearSelection());
         }
     }
 });

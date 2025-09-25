@@ -1,258 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+:root {
+    --primary-color: #0a0c1c;
+    --secondary-color: #14182f;
+    --glass-bg: rgba(20, 24, 47, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-color: #FFFFFF;
+    --text-color-darker: rgba(255, 255, 255, 0.7);
+    --accent-color-1: #A044FF;
+    --accent-color-2: #00D2FF;
+    --error-color: #e06c75;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
 
 html, body {
     margin: 0;
-    padding: 8px;
+    padding: 0;
     height: 100%;
     width: 100%;
-    background-color: #000;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-family: 'Noto Sans KR', sans-serif;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Prevent body scrollbars */
+    overflow: hidden;
+}
+
+#tsparticles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
 }
 
 #terminal {
     flex-grow: 1;
     width: 100%;
+    height: 100%;
+    padding: 15px;
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, var(--accent-color-1), var(--accent-color-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+    font-weight: 700;
+}
+
+/* --- Buttons --- */
+button {
+    background: linear-gradient(90deg, var(--accent-color-2), var(--accent-color-1));
+    border: none;
+    color: white !important;
+    padding: 0.6rem 1.5rem;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+    cursor: pointer;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 210, 255, 0.6);
+}
+
+button:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+    color: var(--text-color-darker) !important;
 }
 
 #file-transfer-ui {
     position: absolute;
     top: 16px;
-    right: 41px;
+    right: 16px;
     z-index: 100;
+    display: flex;
+    gap: 10px;
 }
 
-#upload-btn, #download-btn {
-    background-color: #2E8B57; /* SeaGreen */
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 5px; /* Add some space between buttons */
+/* --- Modals --- */
+.modal-hidden {
+    display: none !important;
 }
 
-#upload-btn:hover, #download-btn:hover {
-    background-color: #3CB371; /* MediumSeaGreen */
-}
-
-#upload-btn:disabled, #download-btn:disabled {
-    background-color: #555753; /* Gray */
-    cursor: not-allowed;
-}
-
-#terminal {
-    width: 100%;
-    height: 100%;
-}
-
-/* --- File Explorer Modal --- */
-#file-explorer-modal.modal-hidden, #input-modal.modal-hidden {
-    display: none;
-}
-
-#file-explorer-modal {
+.modal-overlay {
     position: fixed;
     z-index: 200;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
 }
 
 .modal-content {
-    background-color: #1e1e1e;
-    border: 1px solid #555;
-    width: 80%;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    border-radius: 25px;
+    width: 90%;
     max-width: 600px;
     height: 70%;
     display: flex;
     flex-direction: column;
-    border-radius: 5px;
 }
 
 .modal-header {
-    padding: 10px 15px;
-    border-bottom: 1px solid #555;
+    padding: 15px 25px;
+    border-bottom: 1px solid var(--glass-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #2a2a2a;
 }
 
 .modal-header span {
-    color: #FFFFFF; /* White text for modal titles */
+    font-size: 1.2em;
+    font-weight: 500;
 }
 
 #current-path {
     font-family: monospace;
-    color: #d1d1d1;
+    color: var(--text-color-darker);
 }
 
 #close-modal-btn {
     background: none;
     border: none;
-    color: #d1d1d1;
-    font-size: 24px;
+    box-shadow: none;
+    color: var(--text-color-darker);
+    font-size: 2.5rem;
+    font-weight: bold;
     cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+#close-modal-btn:hover {
+    color: var(--text-color);
+    transform: none;
+    box-shadow: none;
 }
 
 #file-list {
     list-style: none;
-    padding: 0;
+    padding: 10px;
     margin: 0;
     overflow-y: auto;
     flex-grow: 1;
 }
 
 #file-list li {
-    padding: 8px 15px;
+    padding: 10px 15px;
     cursor: pointer;
-    border-bottom: 1px solid #333;
+    border-radius: 10px;
     font-family: monospace;
-    color: #d1d1d1;
+    color: var(--text-color-darker);
     display: flex;
     align-items: center;
+    transition: background-color 0.2s;
 }
 
 #file-list li:hover {
-    background-color: #333;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
 }
 
 #file-list li::before {
-    content: '\01f4c4'; /* 📄 */
+    content: '📄';
     margin-right: 10px;
-    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 #file-list li[data-type="dir"]::before {
-    content: '\01f4c2'; /* 📂 */
+    content: '📂';
 }
 
 #file-list li[data-type="dir"] {
-    color: #61afef; /* Blue for directories */
+    color: var(--accent-color-2);
+    font-weight: 500;
 }
 
-/* --- Login Modal --- */
-#login-modal {
-    position: fixed;
-    z-index: 300; /* Must be on top of everything */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
+.modal-footer {
+    padding: 15px 25px;
+    border-top: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
 }
 
+/* --- Login Modal Specifics --- */
 #login-modal .modal-content {
-    width: 90%;
-    max-width: 350px;
+    max-width: 400px;
+    height: auto;
 }
 
-#username-input, #password-input {
+.modal-body {
+    padding: 25px;
+}
+
+input[type="text"], input[type="password"] {
     width: 100%;
-    background-color: #111;
-    border: 1px solid #555;
-    color: #d1d1d1;
-    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: none !important;
+    border-radius: 999px;
+    padding: 12px 20px;
     font-family: monospace;
-    margin-bottom: 10px;
-    border-radius: 4px;
+    margin-bottom: 15px;
+    transition: border-color 0.3s;
 }
 
-#login-btn {
-    width: 100%;
-    background-color: #2E8B57; /* SeaGreen */
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
+input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--accent-color-1) !important;
+    outline: none;
 }
 
-#login-btn:hover {
-    background-color: #3CB371; /* MediumSeaGreen */
+input::placeholder {
+    color: var(--text-color-darker) !important;
+}
+
+.modal-buttons {
+    margin-top: 10px;
 }
 
 #login-error-msg {
-    color: #e06c75; /* Red */
-    margin-bottom: 10px;
+    color: var(--error-color);
+    margin-bottom: 15px;
     min-height: 1.2em;
     text-align: center;
+    font-weight: 500;
 }
 
-/* Custom Overlay Scrollbar */
-.xterm-viewport, #file-list {
-    /* For Firefox */
-    scrollbar-width: thin;
-    scrollbar-color: #555 transparent;
+/* --- Custom Scrollbar --- */
+::-webkit-scrollbar {
+  width: 10px;
 }
 
-.xterm-viewport:hover, #file-list:hover {
-    scrollbar-color: #888 transparent;
+::-webkit-scrollbar-track {
+  background: var(--secondary-color);
 }
 
-/* For Webkit browsers (Chrome, Safari, Edge) */
-.xterm-viewport::-webkit-scrollbar, #file-list::-webkit-scrollbar {
-    width: 8px;
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent-color-2), var(--accent-color-1));
+  border-radius: 5px;
 }
 
-.xterm-viewport::-webkit-scrollbar-track, #file-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.xterm-viewport::-webkit-scrollbar-thumb, #file-list::-webkit-scrollbar-thumb {
-    background-color: transparent; /* Hidden by default */
-    border-radius: 4px;
-}
-
-.xterm-viewport:hover::-webkit-scrollbar-thumb, #file-list:hover::-webkit-scrollbar-thumb {
-    background-color: #555; /* Visible on viewport hover */
-}
-
-.xterm-viewport::-webkit-scrollbar-thumb:hover, #file-list::-webkit-scrollbar-thumb:hover {
-    background-color: #888; /* More visible on thumb hover */
-}
-
-#modal-confirm-btn {
-    background-color: #2E8B57; /* SeaGreen */
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-#modal-confirm-btn:hover {
-    background-color: #3CB371; /* MediumSeaGreen */
-}
-
-/* --- Modal Footer for Upload --- */
-.modal-footer {
-    padding: 10px 15px;
-    border-top: 1px solid #555;
-    background-color: #2a2a2a; /* Match header background */
-    display: flex;
-    align-items: center;
-}
-
-#modal-filename-input {
-    flex-grow: 1;
-    background-color: #111;
-    border: 1px solid #555;
-    color: #d1d1d1;
-    padding: 8px;
-    font-family: monospace;
-    border-radius: 4px;
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--accent-color-1), var(--accent-color-2));
 }

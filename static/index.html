@@ -9,10 +9,12 @@
     <link rel="icon" href="/logo.png" type="image/png">
 </head>
 <body>
-    <div id="login-modal">
-        <div class="modal-content" style="height: auto;">
+    <div id="tsparticles"></div>
+
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-content">
             <div class="modal-header">
-                <span>Narnia Web Terminal Login</span>
+                <span class="gradient-text">Narnia Web Terminal Login</span>
             </div>
             <div class="modal-body">
                 <div id="login-error-msg"></div>
@@ -27,7 +29,7 @@
 
     <div id="terminal"></div>
 
-    <div id="file-explorer-modal" class="modal-hidden">
+    <div id="file-explorer-modal" class="modal-overlay modal-hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <span id="current-path">/</span>
@@ -49,6 +51,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.5.3/tsparticles.bundle.min.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
