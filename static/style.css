@@ -2,13 +2,13 @@
 
 #narnia-lab-title {
     position: fixed;
-    top: 30px;
+    top: 32.5px;
     left: 20px;
-    font-size: 2em;
+    font-size: 1.8em;
     font-weight: 700;
     z-index: 999;
-    height: 40px;
-    line-height: 40px;
+    height: 30px;
+    line-height: 30px;
 }
 
 :root {
