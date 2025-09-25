@@ -2,7 +2,7 @@
 
 #narnia-lab-title {
     position: fixed;
-    top: 32.5px;
+    top: 22.5px;
     left: 20px;
     font-size: 1.8em;
     font-weight: 700;
@@ -57,7 +57,7 @@ html, body {
     z-index: 0;
     display: flex;
     overflow: hidden;
-    margin-top: 70px;
+    margin-top: 60px;
 }
 
 #terminal {
@@ -118,7 +118,7 @@ button:disabled {
 #file-transfer-ui {
     position: absolute;
     top: 30px;
-    right: 50px;
+    right: 20px;
     z-index: 100;
     display: flex;
     gap: 10px;

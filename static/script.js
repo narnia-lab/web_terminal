@@ -44,7 +44,8 @@ const term = new Terminal({
         brightCyan: '#00D2FF',
         brightWhite: '#FFFFFF'
     },
-    allowTransparency: true
+    allowTransparency: true,
+    applicationCursorKeys: false
 });
 const fitAddon = new FitAddon.FitAddon();
 term.loadAddon(fitAddon);
