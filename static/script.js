@@ -244,6 +244,8 @@ function findPwdInTerminal() {
 
 function closeFileExplorer() {
     fileExplorerModal.classList.add('modal-hidden');
+    fileToUpload = null;
+    fileInput.value = '';
 }
 
 function openFileExplorer(mode, options = {}) {
