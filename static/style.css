@@ -98,6 +98,10 @@ button {
     text-align: center;
 }
 
+#login-btn {
+    width: 100%;
+}
+
 button:hover {
     transform: translateY(-2px);
     box-shadow: 0 0 25px rgba(0, 210, 255, 0.6);
