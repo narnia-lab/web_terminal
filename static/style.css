@@ -18,10 +18,9 @@
 
 html, body {
     margin: 0;
-    padding: 15px;
     height: 100%;
     width: 100%;
-    background-color: var(--primary-color);
+    background-color: transparent;
     color: var(--text-color);
     font-family: 'Noto Sans KR', sans-serif;
     display: flex;
@@ -36,6 +35,7 @@ html, body {
     width: 100%;
     height: 100%;
     z-index: -1;
+    background-color: var(--primary-color);
 }
 
 #terminal {
@@ -43,11 +43,12 @@ html, body {
     width: 100%;
     height: 100%;
     padding: 20px;
-    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     border: 1px solid var(--glass-border);
     border-radius: 15px;
+    z-index: 0;
 }
 
 /* Force xterm.js inner elements to be transparent */
@@ -92,8 +93,8 @@ button:disabled {
 
 #file-transfer-ui {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 30px;
+    right: 30px;
     z-index: 100;
     display: flex;
     gap: 10px;
