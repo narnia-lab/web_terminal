@@ -190,8 +190,13 @@ ws.onerror = (error) => {
 
 // --- Terminal Data Handler ---
 term.onData(data => {
-    if (data === '\x1b[?1;2c') return;
-    if (state === 'connected') ws.send(data);
+    if (state === 'connected') {
+        // For number, echo it locally.
+        if (data >= '0' && data <= '9') {
+            term.write(data);
+        }
+        ws.send(data);
+    }
 });
 
 // --- Login Logic ---

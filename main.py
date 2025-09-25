@@ -88,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 continue
 
         # --- 인증 성공 후 처리 ---
-        channel = await asyncio.to_thread(ssh_client.invoke_shell)
+        channel = await asyncio.to_thread(ssh_client.invoke_shell, term='xterm')
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
         initial_path = await asyncio.to_thread(sftp.getcwd)
         await websocket.send_text(json.dumps({
@@ -104,7 +104,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         data = channel.recv(1024)
                         if data:
                             await websocket.send_text(data.decode('utf-8', 'ignore'))
-                    await asyncio.sleep(0.01)
             except:
                 pass
 
