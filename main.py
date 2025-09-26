@@ -92,7 +92,26 @@ async def websocket_endpoint(websocket: WebSocket):
         # --- 인증 성공 후 처리 ---
         channel = await asyncio.to_thread(ssh_client.invoke_shell, term='xterm')
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
-        initial_path = await asyncio.to_thread(sftp.getcwd)
+        
+        # Get current working directory and find the first subdirectory
+        cwd = await asyncio.to_thread(sftp.getcwd)
+        try:
+            attrs = await asyncio.to_thread(sftp.listdir_attr, path=cwd)
+            # Find the first non-hidden directory
+            first_dir = next(
+                (attr.filename for attr in sorted(attrs, key=lambda a: a.filename)
+                 if stat.S_ISDIR(attr.st_mode) and not attr.filename.startswith('.')),
+                None
+            )
+            if first_dir:
+                # Note: Paramiko SFTP doesn't have a simple path join.
+                # We are assuming a POSIX-like remote path structure.
+                initial_path = f"{cwd.rstrip('/')}/{first_dir}"
+            else:
+                initial_path = cwd
+        except Exception:
+            initial_path = cwd
+
         await websocket.send_text(json.dumps({
             "type": "auth_success",
             "message": "Connection successful!\r\n\r\n",
@@ -133,6 +152,8 @@ async def websocket_endpoint(websocket: WebSocket):
                                 attrs = await asyncio.to_thread(sftp.listdir_attr, path)
                                 files = []
                                 for attr in sorted(attrs, key=lambda a: a.filename):
+                                    if attr.filename.startswith('.'):
+                                        continue
                                     is_dir = stat.S_ISDIR(attr.st_mode)
                                     files.append({
                                         "name": attr.filename,
@@ -237,6 +258,42 @@ if __name__ == "__main__":
         print(url)
         print("="*50)
         threading.Timer(1, lambda: webbrowser.open(url)).start()
-        uvicorn.run(app, host=host, port=port)
+        
+        # --windowed 모드에서 로깅 오류를 방지하기 위한 설정
+        log_config = None
+        if getattr(sys, 'frozen', False) and sys.stdout is None:
+            log_config = {
+                "version": 1,
+                "disable_existing_loggers": True,
+                "formatters": {
+                    "default": {
+                        "()": "uvicorn.logging.DefaultFormatter",
+                        "fmt": "%(levelprefix)s %(message)s",
+                        "use_colors": False,
+                    },
+                    "access": {
+                        "()": "uvicorn.logging.AccessFormatter",
+                        "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
+                        "use_colors": False,
+                    },
+                },
+                "handlers": {
+                    "default": {
+                        "formatter": "default",
+                        "class": "logging.NullHandler",
+                    },
+                    "access": {
+                        "formatter": "access",
+                        "class": "logging.NullHandler",
+                    },
+                },
+                "loggers": {
+                    "uvicorn": {"handlers": ["default"], "level": "INFO", "propagate": False},
+                    "uvicorn.error": {"level": "INFO", "propagate": False},
+                    "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+                },
+            }
+
+        uvicorn.run(app, host=host, port=port, log_config=log_config)
     except IOError as e:
         print(f"Error: {e}")
