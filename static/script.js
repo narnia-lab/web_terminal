@@ -100,11 +100,12 @@ const welcomeTips =
 `\x1b[1m시작 팁:\x1b[0m\r\n` +
 `1. 다음 명령어로 서버를 탐색하세요:\r\n` +
 `   - \x1b[32mls\x1b[0m: 파일 및 디렉토리 목록 보기\r\n` +
+`   - \x1b[32mmkdir [디렉토리]\x1b[0m: 디렉토리 생성\r\n` +
 `   - \x1b[32mcd [디렉토리]\x1b[0m: 디렉토리로 이동\r\n` +
 `   - \x1b[32mcd ..\x1b[0m: 상위 디렉토리로 이동\r\n` +
 `   - \x1b[32mpwd\x1b[0m: 현재 디렉토리 경로 보기\r\n` +
 `   - \x1b[31mCtrl+C\x1b[0m: 현재 실행중인 명령어 중단\r\n` +
-`2. 작업을 원하는 위치로 이동 후 '\x1b[32mnarnia\x1b[0m'를 입력하면 AI가 실행됩니다.\r\n` +
+`2. 작업을 원하는 위치로 이동 후 '\x1b[1;36mnarnia\x1b[0m'를 입력하면 AI가 실행됩니다.\r\n` +
 `3. 터미널 내에서 \x1b[33mCtrl+Shift+C\x1b[0m (복사) 와 \x1b[33mCtrl+Shift+V\x1b[0m (붙여넣기) 를 사용하세요.\r\n` +
 `4. '\x1b[35mUpload\x1b[0m' 와 '\x1b[35mDownload\x1b[0m' 버튼으로 파일을 전송할 수 있습니다.\r\n`;
 

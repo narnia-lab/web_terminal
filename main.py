@@ -93,9 +93,18 @@ async def websocket_endpoint(websocket: WebSocket):
         channel = await asyncio.to_thread(ssh_client.invoke_shell, term='xterm')
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
         initial_path = await asyncio.to_thread(sftp.normalize, '.')
+
+        # MOTD(오늘의 메시지)를 비활성화하기 위해 .hushlogin 파일을 non-interactive 세션에서 생성
+        try:
+            # exec_command는 별도의 세션에서 명령을 실행하므로 사용자 터미널에 보이지 않음
+            await asyncio.to_thread(ssh_client.exec_command, 'touch ~/.hushlogin')
+        except Exception as e:
+            # 파일 생성에 실패하더라도 연결은 계속 진행
+            print(f"Warning: Could not create .hushlogin file via exec_command: {e}")
+
         await websocket.send_text(json.dumps({
             "type": "auth_success",
-            "message": "Connection successful!\r\n\r\n",
+            "message": "\r\n",
             "initial_path": initial_path
         }))
 
