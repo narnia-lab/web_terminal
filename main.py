@@ -92,26 +92,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # --- 인증 성공 후 처리 ---
         channel = await asyncio.to_thread(ssh_client.invoke_shell, term='xterm')
         sftp = await asyncio.to_thread(ssh_client.open_sftp)
-        
-        # Get current working directory and find the first subdirectory
-        cwd = await asyncio.to_thread(sftp.getcwd)
-        try:
-            attrs = await asyncio.to_thread(sftp.listdir_attr, path=cwd)
-            # Find the first non-hidden directory
-            first_dir = next(
-                (attr.filename for attr in sorted(attrs, key=lambda a: a.filename)
-                 if stat.S_ISDIR(attr.st_mode) and not attr.filename.startswith('.')),
-                None
-            )
-            if first_dir:
-                # Note: Paramiko SFTP doesn't have a simple path join.
-                # We are assuming a POSIX-like remote path structure.
-                initial_path = f"{cwd.rstrip('/')}/{first_dir}"
-            else:
-                initial_path = cwd
-        except Exception:
-            initial_path = cwd
-
+        initial_path = await asyncio.to_thread(sftp.normalize, '.')
         await websocket.send_text(json.dumps({
             "type": "auth_success",
             "message": "Connection successful!\r\n\r\n",

@@ -90,6 +90,7 @@ let username = '';
 let password = '';
 let modalMode = 'download'; // 'download' or 'upload'
 let fileToUpload = null;
+let initialRemotePath = ''; // 사용자 초기 경로 저장
 let currentRemotePath = '';
 
 // --- Welcome Message ---
@@ -123,6 +124,7 @@ ws.onmessage = (event) => {
                 loginModal.classList.add('modal-hidden');
                 uploadBtn.disabled = false;
                 downloadBtn.disabled = false;
+                initialRemotePath = message_data.initial_path; // 초기 경로 저장
                 currentRemotePath = message_data.initial_path;
                 term.writeln(welcomeTips);
                 term.write(message_data.message);
@@ -356,17 +358,15 @@ uploadBtn.addEventListener('click', () => {
 
 downloadBtn.addEventListener('click', () => {
     if (state !== 'connected') return;
-    const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('download');
-    fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
+    fetchAndRenderFiles(initialRemotePath || '/');
 });
 
 fileInput.addEventListener('change', (event) => {
     fileToUpload = event.target.files[0];
     if (!fileToUpload) return;
-    const pathFromTerminal = findPwdInTerminal();
     openFileExplorer('upload', { filename: fileToUpload.name });
-    fetchAndRenderFiles(pathFromTerminal || currentRemotePath || '/');
+    fetchAndRenderFiles(initialRemotePath || '/');
 });
 
 // --- Custom Keyboard Shortcuts ---
