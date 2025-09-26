@@ -388,3 +388,16 @@ document.getElementById('terminal').addEventListener('keydown', (e) => {
         }
     }
 });
+
+// --- Version Display ---
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/version')
+        .then(response => response.json())
+        .then(data => {
+            const versionDisplay = document.getElementById('version-display');
+            if (versionDisplay && data.version) {
+                versionDisplay.textContent = `v${data.version}`;
+            }
+        })
+        .catch(error => console.error('Error fetching version:', error));
+});

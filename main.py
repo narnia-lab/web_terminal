@@ -10,9 +10,68 @@ import socket
 import uvicorn
 import webbrowser
 import threading
+import requests
+import subprocess
+from tkinter import messagebox, Tk
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+# --- Application Version and Update Config ---
+CURRENT_VERSION = "1.1.2"  # This should be updated for each new release
+GITHUB_REPO = "narnia-lab/web_terminal" # IMPORTANT: Replace with your GitHub repo, e.g., "user/my-app"
+
+
+def check_for_updates():
+    """Checks GitHub for the latest release and prompts the user to update if available."""
+    if GITHUB_REPO == "owner/repository":
+        print("Warning: GITHUB_REPO is not configured. Skipping update check.")
+        return
+
+    try:
+        api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+        response = requests.get(api_url, timeout=5)
+        response.raise_for_status()
+        latest_release = response.json()
+        latest_version = latest_release["tag_name"].lstrip('v')
+
+        if latest_version > CURRENT_VERSION:
+            root = Tk()
+            root.withdraw()  # Hide the main window
+            message = (
+                f"A new version ({latest_version}) is available.\n"
+                f"You are currently running version {CURRENT_VERSION}.\n\n"
+                "Would you like to update now?"
+            )
+            if messagebox.askyesno("Update Available", message):
+                asset = next((a for a in latest_release["assets"] if a["name"].endswith(".exe")), None)
+                if not asset:
+                    messagebox.showerror("Update Error", "Could not find the executable in the latest release.")
+                    return
+
+                download_url = asset["browser_download_url"]
+                new_exe_path = os.path.join(os.path.dirname(sys.executable), "narnia_web_terminal_new.exe")
+                
+                # Download the new version
+                print(f"Downloading {download_url}...")
+                with requests.get(download_url, stream=True) as r:
+                    r.raise_for_status()
+                    with open(new_exe_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                print("Download complete.")
+
+                # Launch the updater script and exit
+                updater_path = os.path.join(os.path.dirname(sys.executable), "updater.bat")
+                subprocess.Popen([updater_path, sys.executable, new_exe_path])
+                sys.exit(0)
+            root.destroy()
+
+    except Exception as e:
+        print(f"Failed to check for updates: {e}")
+
+
 
 # PyInstaller에 의해 생성된 임시 경로 확인
 if getattr(sys, 'frozen', False):
@@ -30,6 +89,12 @@ app = FastAPI()
 
 # 'static' 디렉토리를 정적 파일 경로로 마운트
 app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+
+@app.get("/api/version")
+async def get_version():
+    """Returns the current application version."""
+    return {"version": CURRENT_VERSION}
 
 
 @app.get("/")
@@ -238,6 +303,10 @@ def find_free_port(host="127.0.0.1", start_port=8001):
 
 
 if __name__ == "__main__":
+    # When running as an executable, this check will run first.
+    if getattr(sys, 'frozen', False):
+        check_for_updates()
+
     host = "127.0.0.1"
     try:
         port = find_free_port(host)
