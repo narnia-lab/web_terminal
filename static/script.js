@@ -86,6 +86,7 @@ const confirmBtn = document.getElementById('modal-confirm-btn');
 
 // --- State Management ---
 let state = 'authenticating'; // 'authenticating', 'connected'
+let isPasswordInput = false;
 let username = '';
 let password = '';
 let modalMode = 'download'; // 'download' or 'upload'
@@ -162,6 +163,9 @@ ws.onmessage = (event) => {
                 term.write(textData);
             }
         } else {
+            if (textData.toLowerCase().includes('password:') || textData.toLowerCase().includes('비밀번호:')) {
+                isPasswordInput = true;
+            }
             term.write(textData);
         }
     }
@@ -195,8 +199,12 @@ ws.onerror = (error) => {
 // --- Terminal Data Handler ---
 term.onData(data => {
     if (state === 'connected') {
-        // For number, echo it locally.
-        if (data >= '0' && data <= '9') {
+        // Reset password flag on Enter key
+        if (data === '\r') {
+            isPasswordInput = false;
+        }
+        // For numbers, echo locally ONLY if not in a password prompt
+        if (!isPasswordInput && (data >= '0' && data <= '9')) {
             term.write(data);
         }
         ws.send(data);
